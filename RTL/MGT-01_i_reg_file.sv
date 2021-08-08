@@ -35,13 +35,11 @@ module MGT_01_i_reg_file
     
     assign we = (w_iaddr_i == X0) ? 1'b0 : we_i;  //If write address is register x0 don't write 
 
-    //We write on the negative edge of the clock because by doing so we can read
-    //the updated value of the register on the second half of the clock cycle
 
     always_ff @(posedge clk_i)
       begin  
         if (we)
-          i_REG_FILE[w_iaddr_i] <= wr_idata_i;  //Write on negative edge of clk
+            i_REG_FILE[w_iaddr_i] <= wr_idata_i;  //Write on positive edge of clk
       end
 
     //Reads are combinatorials
