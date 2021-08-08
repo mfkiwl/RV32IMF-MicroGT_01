@@ -5,7 +5,7 @@ Github: (https://github.com/SiliconLover/RV32IMAF-MicroGT_01)
 MicroGT_01 is the first core of the series MicroGT written in SystemVerilog, it is a 32bit OoO execution RISC-V core, 6 stage deep pipeline, designed for low energy consumption. Outside the core, there are two caches and a module for I/O and memory management.
 
 
-It is possible to implement it on a Xilinx FPGA, for example a [Basys 3](https://store.digilentinc.com/basys-3-artix-7-fpga-beginner-board-recommended-for-introductory-users/). For now this project implement some Xilinx's IPs *to archive higher performance and lower the resources usage* (for example for math functions block. The files that have `_IP.sv` contain IPs blocks), thus **it's not a portable design**. 
+It is possible to implement it on a Xilinx FPGA, for example a [Basys 3](https://store.digilentinc.com/basys-3-artix-7-fpga-beginner-board-recommended-for-introductory-users/). For now this project implement some Xilinx's IPs *to achieve higher performance and lower the resources usage* (for example for math functions block. The files that have `_IP.sv` contain IPs blocks), thus **it's not a portable design**. 
 
 MicroGT_01 **is not designed for commercial purpouse but for educational**, I belive the best method to learn how CPU's work is to design one by yourself! However if you want to 
 use this softcore in your design you are free to do so.
