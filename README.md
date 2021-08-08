@@ -52,6 +52,10 @@ The **I/O unit** implement different communication protocols as discussed later.
 All these things are discussed more in depth, you can find the documents in the Docs 
 folder.
 
+### MicroGT-01 microarchitecture:
+
+  ![plot](Docs/Images/uArch.png)
+
 
 ## Features
 
