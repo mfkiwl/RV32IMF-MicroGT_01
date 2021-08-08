@@ -33,13 +33,10 @@ module MGT_01_f_reg_file
 
     float_t f_REG_FILE [0:XLEN - 1];   //Register file
 
-    //We write on the negative edge of the clock because by doing so we can read
-    //the updated value of the register on the second half of the clock cycle
-
     always_ff @(posedge clk_i)
       begin  
         if (we_i)
-          f_REG_FILE[w_faddr_i] <= wr_fdata_i;  //Write on negative edge of clk
+            f_REG_FILE[w_faddr_i] <= wr_fdata_i;  //Write on positive edge of clk
       end
 
     //Reads are combinatorials
