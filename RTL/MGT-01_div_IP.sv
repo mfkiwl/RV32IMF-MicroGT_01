@@ -62,7 +62,8 @@ module MGT_01_div_IP
   );
 
   // Since the unsigned divider has 34 cycle of latency and the signed one has 36 we need
-  // to create 2 additional cycles of latency using 2 flip flops. l1 and l2 stands for latency.
+  // to create 2 additional cycles of latency using 2 flip flops to simplify the control logic.
+  // l1 and l2 stands for latency.
 
   data_u dividend_l1, dividend_l2;
   data_u divisor_l1, divisor_l2;
