@@ -2,7 +2,7 @@
 
 The multiply unit is responsable for all the four multiply instructions in the "M" RISC-V extension.
 
-It implement two Xilinx's IP modules:
+It implement three Xilinx's IP modules:
 
   * A **signed multiplier**
   * An **unsigned multiplier**
