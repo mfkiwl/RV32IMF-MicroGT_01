@@ -14,8 +14,8 @@
 
 module MGT_01_mul_IP 
 ( //Inputs
-  input  data_u           op_A_i,      //Multiplicand
-  input  data_u           op_B_i,      //Multiplier
+  input  data_u           multiplicand_i,      //Multiplicand
+  input  data_u           multiplier_i,      //Multiplier
 
   input  logic            clk_i,
   input  logic            clk_en_i,    //Clock enable to stall the pipeline
@@ -38,40 +38,40 @@ module MGT_01_mul_IP
   //MODULES INSTANTIATION IP VIVADO 
 
   sign_mult signed_multiplier (
-  .CLK( clk_i         ),  
-  .A  ( op_A_i.s_data ),      
-  .B  ( op_B_i.s_data ),      
-  .CE ( clk_en_i      ),    
-  .P  ( result_mul_sm )      
+  .CLK( clk_i                 ),  
+  .A  ( multiplicand_i.s_data ),      
+  .B  ( multiplier_i.s_data   ),      
+  .CE ( clk_en_i              ),    
+  .P  ( result_mul_sm         )      
   );
 
   unsign_mult unsigned_multiplier (
-  .CLK( clk_i         ),  
-  .A  ( op_A_i.u_data ),      
-  .B  ( op_B_i.u_data ),      
-  .CE ( clk_en_i      ),    
-  .P  ( result_mul_um )     
+  .CLK( clk_i                 ),  
+  .A  ( multiplicand_i.u_data ),      
+  .B  ( multiplier_i.u_data   ),      
+  .CE ( clk_en_i              ),    
+  .P  ( result_mul_um         )     
   );
 
   sign_x_unsign_mult mix_multiplier (
-  .CLK( clk_i         ),  
-  .A  ( op_A_i.s_data ),      
-  .B  ( op_B_i.u_data ),      
-  .CE ( clk_en_i      ),    
-  .P  ( result_mul_mm )
+  .CLK( clk_i                 ),  
+  .A  ( multiplicand_i.s_data ),      
+  .B  ( multiplier_i.u_data   ),      
+  .CE ( clk_en_i              ),    
+  .P  ( result_mul_mm         )
   );
   
       always_comb 
         begin : SELECT_OUTPUT
           unique case (ops_i)
 
-            MUL_U:    result_o = result_mul_sm.low;
+            MUL_:    result_o = result_mul_sm.low;
 
-            MULH_U:   result_o = result_mul_sm.high;
+            MULH_:   result_o = result_mul_sm.high;
 
-            MULHSU_U: result_o = result_mul_mm.high;
+            MULHSU_: result_o = result_mul_mm.high;
 
-            MULHU_U:  result_o = result_mul_um.high;
+            MULHU_:  result_o = result_mul_um.high;
 
           endcase
         end : SELECT_OUTPUT
