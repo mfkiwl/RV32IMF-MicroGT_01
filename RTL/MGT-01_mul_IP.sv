@@ -14,7 +14,7 @@
 
 module MGT_01_mul_IP 
 ( //Inputs
-  input  data_u           multiplicand_i,      //Multiplicand
+  input  data_u           multiplicand_i,    //Multiplicand
   input  data_u           multiplier_i,      //Multiplier
 
   input  logic            clk_i,
@@ -33,7 +33,7 @@ module MGT_01_mul_IP
 
   mul_res_s   result_mul_sm, 
               result_mul_mm, 
-              result_mul_um; //Output of multipliers
+              result_mul_um;    //Output of multipliers
 
   //MODULES INSTANTIATION IP VIVADO 
 
