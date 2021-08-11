@@ -14,8 +14,8 @@
 
 module MGT_01_mul_IP 
 ( //Inputs
-  input  data_u           multiplicand_i,    //Multiplicand
-  input  data_u           multiplier_i,      //Multiplier
+  input  data_u           multiplicand_i,      //Multiplicand
+  input  data_u           multiplier_i,        //Multiplier
 
   input  logic            clk_i,
   input  logic            clk_en_i,    //Clock enable to stall the pipeline
@@ -33,7 +33,9 @@ module MGT_01_mul_IP
 
   mul_res_s   result_mul_sm, 
               result_mul_mm, 
-              result_mul_um;    //Output of multipliers
+              result_mul_um; //Output of multipliers
+
+  mul_ops_e   ops_sel;    //Output of the shift register
 
   //MODULES INSTANTIATION IP VIVADO 
 
@@ -63,7 +65,7 @@ module MGT_01_mul_IP
   
       always_comb 
         begin : SELECT_OUTPUT
-          unique case (ops_i)
+          unique case (ops_sel)
 
             MUL_:    result_o = result_mul_sm.low;
 
@@ -75,5 +77,18 @@ module MGT_01_mul_IP
 
           endcase
         end : SELECT_OUTPUT
+
+    // To get the proper output we need align the various operations signals to the
+    // multiplier pipeline. We use a shift register which is emit the inputs in 4 cycles
+
+    mul_ops_e [4:0] shift_out;
+
+      always_ff @(posedge clk_i)
+        begin : SHIFT_REGISTER
+          if (clk_en_i)
+            shift_out <= {shift_out[3:0], ops_i};
+        end : SHIFT_REGISTER
+
+    assign ops_sel = shift_out[4];
   
 endmodule
