@@ -80,7 +80,7 @@ module MGT_01_div_IP
   
       always_ff @(posedge clk_i)
         begin : LATENCY_1
-        if (!rst_n_i)
+          if (!rst_n_i)
             begin
               dividend_l1 <= 32'b0;
               divisor_l1  <= 32'b0;
@@ -94,7 +94,7 @@ module MGT_01_div_IP
 
       always_ff @(posedge clk_i)
         begin : LATENCY_2
-        if (!rst_n_i)
+          if (!rst_n_i)
             begin
               dividend_l2 <= 32'b0;
               divisor_l2  <= 32'b0;
