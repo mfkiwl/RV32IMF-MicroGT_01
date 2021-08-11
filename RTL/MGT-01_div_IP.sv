@@ -5,7 +5,7 @@
 // Project Name:   MicroGT-01                                                 //
 // Language:       SystemVerilog                                              //
 //                                                                            //
-// Description:    Divide unit, it perform XLEN / XLEN signed/unsigned        // 
+// Description:    Divide unit, it perform XLEN / XLEN signed or unsigned     // 
 //                 division with remainder. It has 36 latency cycle and it    //
 //                 detect the division by zero (the only arithmetic exception)//  
 //                 in RISC-V. The output is available in the 37th cycle.      //
