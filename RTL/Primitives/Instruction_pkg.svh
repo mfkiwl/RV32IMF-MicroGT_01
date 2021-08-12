@@ -237,7 +237,7 @@
             S   = 2'b00,            //Single precision
             D   = 2'b01,            //Double precision (NOT IMPLEMENTED)
             RES = 2'b10,            //Reserved
-            Q   = 2'b11,            //Quad precision (NOT IMPLEMENTED)
+            Q   = 2'b11             //Quad precision (NOT IMPLEMENTED)
         } funct2_t;
 
 
