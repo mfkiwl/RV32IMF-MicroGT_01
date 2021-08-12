@@ -233,7 +233,12 @@
         } float_funct7_e;
 
         //Floating point funct2 field
-        typedef logic [1:0] funct2_t;
+        typedef enum logic [1:0] {
+            S   = 2'b00,            //Single precision
+            D   = 2'b01,            //Double precision (NOT IMPLEMENTED)
+            RES = 2'b10,            //Reserved
+            Q   = 2'b11,            //Quad precision (NOT IMPLEMENTED)
+        } funct2_t;
 
 
     /////////////////////////////////
