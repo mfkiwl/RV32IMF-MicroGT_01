@@ -62,6 +62,7 @@ folder.
 ### **Core**:
 ---
 * 32-bit RISC-V CPU softcore.
+* In order issue, out of order execute and in order commit pipeline.
 * Support for RISC-V extension:
   * **I**: Integer base instructions.
   * **M**: Integer multiplication and division instructions.
@@ -74,6 +75,7 @@ folder.
   * Normal performance: 50MHz
   * Energy saving: 10MHz
 * Simple branch predictor.
+* Precise interrupt.
 
 ### **External**:
 ---
