@@ -7,7 +7,7 @@
 //                                                                            //
 // Description:    This module contains the hardware necessary to perform a   //
 //                 signed/unsigned multiplication. It is not pipelined to     //
-//                 save area and resources.                                   //
+//                 save AREA and RESOURCES.                                   //
 ////////////////////////////////////////////////////////////////////////////////
 
 //NOT TESTED YET!!
