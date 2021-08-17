@@ -1,6 +1,6 @@
 # **MicroGT-01 RISC-V SOFTCORE**
 
-Github: (https://github.com/SiliconLover/RV32IMAF-MicroGT_01)
+Github: (https://github.com/GabbedT/RV32IMF-MicroGT_01)
 
 MicroGT_01 is the first core of the series MicroGT written in SystemVerilog, it is a 32bit OoO execution RISC-V core, 6 stage deep pipeline, designed for low energy consumption. Outside the core, there are two caches and a module for I/O and memory management.
 
