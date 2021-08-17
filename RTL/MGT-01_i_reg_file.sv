@@ -9,8 +9,8 @@
 //                 integer registers. It has 2 read and 1 write ports.        //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 module MGT_01_i_reg_file 
 (   //Inputs
