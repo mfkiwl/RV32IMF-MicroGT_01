@@ -34,7 +34,7 @@ module booth_radix4
 
   logic [XLEN:0] partial_product;
 
-  logic [XLEN - 1:0] reg_b_in, reg_b_out;   //Multiplicand register nets
+  logic [XLEN:0] reg_b_in, reg_b_out;   //Multiplicand register nets
   
   logic [3:0] counter;
   
@@ -48,7 +48,7 @@ module booth_radix4
             reg_pair_out <= (~(|counter)) ? '{33'b0, multiplier_i, 1'b0} : reg_pair_in;
         end
 
-  assign reg_b_in = multiplicand_i;
+  assign reg_b_in = {multiplicand_i[XLEN - 1], multiplicand_i};
 
       always_ff @(posedge clk_i)
         begin
