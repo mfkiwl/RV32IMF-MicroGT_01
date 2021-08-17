@@ -9,8 +9,8 @@
 //                 a 2XLEN result. The multiplier itself has 3 latency cycle. // 
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 module MGT_01_mul_IP 
 ( //Inputs
