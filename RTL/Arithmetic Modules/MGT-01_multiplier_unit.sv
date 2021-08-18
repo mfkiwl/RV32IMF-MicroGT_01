@@ -114,7 +114,7 @@ module MGT_01_multiply_unit
 //END BOOTH RADIX-4 ALGORITHM
 
     always_comb 
-      begin : MULTPLEXER
+      begin : MULTIPLEXER
         case (operation_i)
 
                     //Take the lower 32 bits
@@ -145,6 +145,6 @@ module MGT_01_multiply_unit
                       endcase
                     end
         endcase
-      end : MULTPLEXER
+      end : MULTIPLEXER
 
 endmodule
