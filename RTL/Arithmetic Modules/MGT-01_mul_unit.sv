@@ -14,7 +14,7 @@
 `include "Instruction_pkg.svh"
 `include "Modules_pkg.svh"
 
-module MGT_01_multiply_unit
+module MGT_01_mul_unit
 ( //Inputs
   input  logic signed [XLEN - 1:0]        multiplier_i, multiplicand_i, 
 
