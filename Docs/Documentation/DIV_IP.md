@@ -1,4 +1,4 @@
-# DIVIDE UNIT
+# DIVIDE UNIT IP
 
 The multiply unit is responsable for all the four division instructions in the "M" RISC-V extension.
 
