@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+`include "Instruction_pkg.svh"
+`include "Modules_pkg.svh"
 
 module MGT_01_iregs_tb ();
 
