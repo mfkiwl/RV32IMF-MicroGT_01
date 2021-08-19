@@ -3,7 +3,7 @@
 `include "Instruction_pkg.svh"
 `include "Modules_pkg.svh"
 
-module MGT_01_multiply_unit_tb ();
+module MGT_01_mul_unit_tb ();
   
   localparam T = 10;
 
@@ -20,7 +20,7 @@ module MGT_01_multiply_unit_tb ();
   fu_state_e                       fu_state_o;                    //Functional unit state
     
 
-  MGT_01_multiply_unit uut (.*);
+  MGT_01_mul_unit uut (.*);
   
   //TB signal
   logic signed [(XLEN * 2) - 1:0]  result_64;
