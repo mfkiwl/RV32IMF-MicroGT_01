@@ -24,7 +24,6 @@ Since this project is in constant evolution at this stage, things already comple
 <br />
 
   * Complete the **`EX`** stage
-  * Review the microarchitecture (possibility of merging **`EX`** and **`MEM`** stages)
   * Testing the entire **`EX`** stage.
 
 <br />
@@ -35,6 +34,7 @@ Since this project is in constant evolution at this stage, things already comple
 
   * Replacing all the IP modules
   * Write multiplication unit documentation
+  * Review the microarchitecture (possibility of merging **`EX`** and **`MEM`** stages)
   * Divider unit
   
 <br />
