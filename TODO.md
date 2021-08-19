@@ -34,7 +34,7 @@ Since this project is in constant evolution at this stage, things already comple
 ## 🟠 IN PROGRESS:
 
   * Replacing all the IP modules
-  * Write multiply unit documentation
+  * Write multiplication unit documentation
   * Divider unit
   
 <br />
@@ -45,6 +45,6 @@ Since this project is in constant evolution at this stage, things already comple
 
   * Register files
   * ALU
-  * Multiply unit
+  * Multiplication unit
   * Write register files documentation
   * Write ALU documentation
