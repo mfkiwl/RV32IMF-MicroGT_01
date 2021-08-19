@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Creator:        Gabriele Tripi - gabrieletripi02@gmail.com                 //
 //                                                                            //
-// Design Name:    Multiply Unit                                              //
+// Design Name:    Multiplication Unit                                        //
 // Project Name:   MicroGT-01                                                 //
 // Language:       SystemVerilog                                              //
 //                                                                            //
