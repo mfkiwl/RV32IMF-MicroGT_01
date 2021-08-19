@@ -1,4 +1,4 @@
-# MULTIPLY UNIT
+# MULTIPLY UNIT IP
 
 The multiply unit is responsable for all the four multiply instructions in the "M" RISC-V extension.
 
