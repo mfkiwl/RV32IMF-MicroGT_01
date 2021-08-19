@@ -128,20 +128,20 @@ module MGT_01_multiply_unit
 
 
           MULHSU_:  begin 
-                      case(multiplier_i[XLEN - 1], multiplicand_i[XLEN - 1]) 
+                      case({multiplier_i[XLEN - 1], multiplicand_i[XLEN - 1]}) 
                                    
                         //Both positive
-                        2'b00:            result_o = result_mul;
+                        2'b00:            result_o = result_mul[63:XLEN];
 
                         //Positive, negative
-                        2'b01:            result_o = -result_mul;
+                        2'b01:            result_o = -result_mul[63:XLEN];
 
                         //Negative, positive
-                        2'b10:            result_o = result_mul;
+                        2'b10:            result_o = result_mul[63:XLEN];
 
                         //Both negative
-                        2'b11:            result_o = -result_mul;
-                        
+                        2'b11:            result_o = -result_mul[63:XLEN];
+
                       endcase
                     end
         endcase
