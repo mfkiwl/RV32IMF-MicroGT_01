@@ -148,7 +148,7 @@ module MGT_01_mul_unit
         endcase
       end : MULTIPLEXER
   
-  //When resilt is VALID (when counter is equal to 0) the multiplexer select the output of this functional unit.
+  //When result is VALID (when counter is equal to 0) the multiplexer select the output of this functional unit.
   assign sel_mux_o = (~(|counter));
 
 endmodule
