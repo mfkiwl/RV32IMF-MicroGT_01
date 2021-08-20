@@ -138,5 +138,4 @@ folder.
 
 # **Documentation**
 
-
 All the documents are in the Docs folder in this repository, here you can find description about architectural and microarchitectural design.
