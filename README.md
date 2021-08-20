@@ -74,14 +74,12 @@ folder.
 
   * The **decoder** decodes the instruction generating the various pipeline signals.
   * The **exception detector** monitors the opcodes and the various function fields.
-  * The **BTA** (Branch Target Address) is calculated in this stage. 
-  * The **branch predictor** is used to choose whether taking a branch or not.
-  * Check **`RAW`** hazards.
+  * The **BTA** (Branch Target Address) is calculated in this stage.* The **branch predictor** is used to choose whether taking a branch or not.
 
 ### **Instruction issue (IS):**
 
   * **Reads operands** from the register files.
-  * The **scoreboard** schedule the various instructions depending on the operation latency and the various **`WAW`**, **`WAR`** hazards.
+  * The **scoreboard** schedule the various instructions depending on the operation latency and the various **`RAW`**, **`WAW`**, **`WAR`** and **structural** hazards.
   * Here the instructions are issued **in order**.
 
 ### **Execute (EX)**
