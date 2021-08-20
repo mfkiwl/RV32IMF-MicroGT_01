@@ -25,8 +25,7 @@ module MGT_01_mul_unit
   
   //Outputs
   output logic signed [XLEN - 1:0]        result_o,                      
-  output fu_state_e                       fu_state_o,                    //Functional unit state
-  output logic                            sel_mux_o                      //Final execute multiplexer select
+  output fu_state_e                       fu_state_o                     //Functional unit state
 );
 
 //START BOOTH RADIX-4 ALGORITHM 
@@ -147,8 +146,5 @@ module MGT_01_mul_unit
                     end
         endcase
       end : MULTIPLEXER
-  
-  //When result is VALID (when counter is equal to 0) the multiplexer select the output of this functional unit.
-  assign sel_mux_o = (~(|counter));
 
 endmodule
