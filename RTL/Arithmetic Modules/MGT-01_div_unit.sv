@@ -11,6 +11,8 @@
 //                 the non restoring radix-2 division algorithm.              //
 ////////////////////////////////////////////////////////////////////////////////
 
+//NOT TESTED, THIS IS JUST A TEST MODULE
+
 `include "Modules_pkg.svh"
 `include "Instruction_pkg.svh"
 
