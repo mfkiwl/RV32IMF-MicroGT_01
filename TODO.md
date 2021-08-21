@@ -33,6 +33,7 @@ Since this project is in constant evolution at this stage, things already comple
 ## 🟠 IN PROGRESS:
 
   * Replacing all the IP modules
+  * Review multiplication unit 
   * Write multiplication unit documentation
   * Review the microarchitecture (possibility of merging **`EX`** and **`MEM`** stages)
   * Divider unit
