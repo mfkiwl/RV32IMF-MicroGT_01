@@ -12,7 +12,6 @@ use this softcore in your design you are free to do so.
 
 
 
-
 ## **WARNING!**
 ---
 
