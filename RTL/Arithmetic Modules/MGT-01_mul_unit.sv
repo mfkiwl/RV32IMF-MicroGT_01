@@ -66,7 +66,7 @@ module MGT_01_mul_unit
 
       always_comb 
         begin : BOOTH_RULES
-          case ({reg_pair_out._A[1:0], reg_pair_out._L})    //Booth radix-4 rules
+          unique case ({reg_pair_out._A[1:0], reg_pair_out._L})    //Booth radix-4 rules
 
             3'b000:           partial_product = reg_pair_out._P + 0;
 
