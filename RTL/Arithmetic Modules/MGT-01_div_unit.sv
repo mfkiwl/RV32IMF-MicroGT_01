@@ -208,6 +208,7 @@ module MGT_01_div_unit
                     end
 
             REMU_:  result_o = remainder;  //Do nothing since the operands are already unsigned
+            
           endcase
         end : RESULT_SELECTION
   
