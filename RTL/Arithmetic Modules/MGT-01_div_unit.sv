@@ -11,10 +11,8 @@
 //                 the non restoring radix-2 division algorithm.              //
 ////////////////////////////////////////////////////////////////////////////////
 
-//NOT TESTED, THIS IS JUST A TEST MODULE
-
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
 
 //FSM state enumeration (move in module when finish this design)
 typedef enum logic [1:0] {IDLE, DIVIDE, RESTORING} fsm_state_e;
@@ -35,7 +33,8 @@ module MGT_01_div_unit
 
   //TEST: THIS WILL BE DELETED ONCE THIS MODULE WILL BE VERIFIED
   output fsm_state_e                      state_o,
-  output logic [XLEN - 1:0]               quotient_o, remainder_o
+  output logic [XLEN - 1:0]               quotient_o, remainder_o, 
+  output logic [4:0]                      counter_o
 );
 
   typedef struct packed {
@@ -61,7 +60,7 @@ module MGT_01_div_unit
         begin : STATE_REG
           if (!rst_n_i)
             crt_state <= IDLE;
-          else if (~(|counter) & clk_en_i)  //The counter needs to be 0 to advance to the next state 
+          else if (clk_en_i)   
             crt_state <= nxt_state;
         end : STATE_REG
 
@@ -69,6 +68,8 @@ module MGT_01_div_unit
       always_ff @(posedge clk_i)
         begin : COUNTER
           if (!rst_n_i)
+            counter <= 0;
+          else if (&counter)    //If counter is equal to 11111 (31)
             counter <= 0;
           else if (clk_en_i && (crt_state == DIVIDE))
             counter <= counter + 1;
@@ -81,10 +82,7 @@ module MGT_01_div_unit
 
             IDLE:       nxt_state = DIVIDE;
 
-            DIVIDE:   if (~|counter)
-                        nxt_state = RESTORING;
-                      else 
-                        nxt_state = DIVIDE;
+            DIVIDE:     nxt_state = (&counter) ? RESTORING : DIVIDE;
 
             RESTORING:  nxt_state = IDLE;
 
@@ -105,14 +103,14 @@ module MGT_01_div_unit
   //Divisor register nets
   logic signed [XLEN:0] reg_b_in, reg_b_out;
 
-  assign reg_b_in = {divisor_i[XLEN - 1], divisor_i};
+  assign reg_b_in = {divisor[XLEN - 1], divisor};
 
       //Data registers
 
       always_ff @(posedge clk_i)
         begin : REG_B 
           if (!rst_n_i)
-            reg_b_out <= 0;
+            reg_b_out <= 32'b0;
           else if ((crt_state == IDLE) && clk_en_i)    //Don't update the register until the operation is completed
             reg_b_out <= reg_b_in;
         end : REG_B 
@@ -121,12 +119,14 @@ module MGT_01_div_unit
         begin : REG_P_A
           if (!rst_n_i)
             reg_pair_out <= 0;
-          else if (clk_en_i)
+          if (clk_en_i)
             begin
               if (crt_state == IDLE)
-                reg_pair_out <= '{33'b0, dividend_i};
-              else 
+                reg_pair_out <= '{33'b0, dividend};
+              else if (crt_state == DIVIDE)
                 reg_pair_out <= reg_pair_in;
+              else 
+                reg_pair_out._P <= reg_pair_in._P;
             end
         end : REG_P_A 
 
@@ -134,14 +134,14 @@ module MGT_01_div_unit
 
   assign {partial_division_shift, A_shifted} = {reg_pair_out._P, reg_pair_out._A} << 1; //Shift left one
         
-  assign reg_pair_in._A = {A_shifted[XLEN - 1:1], ~partial_division[XLEN]};    //If P[XLEN] == 1 => A[0] = 0 else A[0] = 1;
+  assign reg_pair_in._A = {A_shifted[XLEN - 1:1], ~reg_pair_out._P[XLEN]};    //If P[XLEN] == 1 => A[0] = 0 else A[0] = 1;
   assign reg_pair_in._P = partial_division;
 
       always_comb 
         begin : DIVISION_LOGIC
           if (crt_state == IDLE)
             begin
-              partial_division = 0; //Initialize to zero 
+              partial_division = 32'b0; //Initialize to zero 
             end
           else if (crt_state == DIVIDE)
             begin
@@ -159,10 +159,10 @@ module MGT_01_div_unit
               if (partial_division[XLEN] == 1'b1)     //If P is negative
                 partial_division = reg_pair_out._P + reg_b_out;
               else                                    //If P is positive
-                partial_division = reg_pair_out._P + 0;
+                partial_division = reg_pair_out._P + 32'b0;
             end
           else //DEFAULT
-            partial_division = 0;
+            partial_division = 32'b0;
 
         end : DIVISION_LOGIC
 
@@ -216,5 +216,6 @@ module MGT_01_div_unit
   assign state_o = crt_state;
   assign quotient_o = quotient;
   assign remainder_o = remainder;
+  assign counter_o = counter;
 
-endmodule 
+endmodule  
