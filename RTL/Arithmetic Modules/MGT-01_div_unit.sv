@@ -11,8 +11,8 @@
 //                 the non restoring radix-2 division algorithm.              //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 //FSM state enumeration (move in module when finish this design)
 typedef enum logic [1:0] {IDLE, DIVIDE, RESTORING} fsm_state_e;
