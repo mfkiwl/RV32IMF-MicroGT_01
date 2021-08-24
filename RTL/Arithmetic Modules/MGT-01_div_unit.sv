@@ -14,9 +14,6 @@
 `include "Modules_pkg.svh"
 `include "Instruction_pkg.svh"
 
-//FSM state enumeration (move in module when finish this design)
-typedef enum logic [1:0] {IDLE, DIVIDE, RESTORING} fsm_state_e;
-
 module MGT_01_div_unit 
 ( //Inputs
   input  logic signed [XLEN - 1:0]        dividend_i, divisor_i, 
@@ -29,13 +26,10 @@ module MGT_01_div_unit
   //Outputs
   output logic signed [XLEN - 1:0]        result_o,                      
   output fu_state_e                       fu_state_o,                    //Functional unit state
-  output logic                            zero_divide,
-
-  //TEST: THIS WILL BE DELETED ONCE THIS MODULE WILL BE VERIFIED
-  output fsm_state_e                      state_o,
-  output logic [XLEN - 1:0]               quotient_o, remainder_o, 
-  output logic [4:0]                      counter_o
+  output logic                            zero_divide
 );
+
+  typedef enum logic [1:0] {IDLE, DIVIDE, RESTORING} fsm_state_e;
 
   typedef struct packed {
       logic signed [XLEN:0]      _P;      //Partial 
@@ -54,6 +48,16 @@ module MGT_01_div_unit
   fsm_state_e crt_state, nxt_state;
 
   logic [4:0] counter;
+  
+  logic rst_n;  //Reset delayed
+  
+      // We delay the reset signals by 1 cycle because the FSM should
+      // stay 2 cycles in the IDLE stage when resetted
+
+      always_ff @(posedge clk_i)
+        begin
+          rst_n <= rst_n_i;
+        end
 
       //State register
       always_ff @(posedge clk_i)
@@ -69,8 +73,6 @@ module MGT_01_div_unit
         begin : COUNTER
           if (!rst_n_i)
             counter <= 0;
-          else if (&counter)    //If counter is equal to 11111 (31)
-            counter <= 0;
           else if (clk_en_i && (crt_state == DIVIDE))
             counter <= counter + 1;
         end : COUNTER
@@ -80,9 +82,9 @@ module MGT_01_div_unit
         begin
           unique case (crt_state)
 
-            IDLE:       nxt_state = DIVIDE;
+            IDLE:       nxt_state = (~rst_n) ? IDLE : DIVIDE;
 
-            DIVIDE:     nxt_state = (&counter) ? RESTORING : DIVIDE;
+            DIVIDE:     nxt_state = (&counter) ? RESTORING : DIVIDE;  //If counter is equal to 11111
 
             RESTORING:  nxt_state = IDLE;
 
@@ -132,7 +134,7 @@ module MGT_01_div_unit
 
   //Algorithm logic
 
-  assign {partial_division_shift, A_shifted} = {reg_pair_out._P, reg_pair_out._A} << 1; //Shift left one
+  assign {partial_division_shift, A_shifted} = reg_pair_out << 1; //Shift left one
         
   assign reg_pair_in._A = {A_shifted[XLEN - 1:1], ~reg_pair_out._P[XLEN]};    //If P[XLEN] == 1 => A[0] = 0 else A[0] = 1;
   assign reg_pair_in._P = partial_division;
@@ -156,7 +158,7 @@ module MGT_01_div_unit
             end
           else if (crt_state == RESTORING)
             begin
-              if (partial_division[XLEN] == 1'b1)     //If P is negative
+              if (reg_pair_out._P[XLEN] == 1'b1)     //If P is negative
                 partial_division = reg_pair_out._P + reg_b_out;
               else                                    //If P is positive
                 partial_division = reg_pair_out._P + 32'b0;
@@ -174,7 +176,7 @@ module MGT_01_div_unit
   //Result of the divison
   logic signed [XLEN - 1:0] quotient, remainder;
 
-  assign quotient = reg_pair_out._A;
+  assign quotient = A_shifted;
   assign remainder = reg_pair_out._P[XLEN - 1:0];
 
       always_comb 
@@ -211,11 +213,5 @@ module MGT_01_div_unit
             
           endcase
         end : RESULT_SELECTION
-  
-  //TEST: THIS WILL BE DELETED ONCE THIS MODULE WILL BE VERIFIED
-  assign state_o = crt_state;
-  assign quotient_o = quotient;
-  assign remainder_o = remainder;
-  assign counter_o = counter;
 
-endmodule  
+endmodule 
