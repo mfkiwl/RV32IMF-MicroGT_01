@@ -178,13 +178,26 @@ module MGT_01_div_unit
 
   assign quotient = A_shifted;
   assign remainder = reg_pair_out._P[XLEN - 1:0];
+  
+  //Operation register
+  
+  logic signed [XLEN - 1:0] dividend_ff, divisor_ff;
+  
+      always_ff @(posedge clk_i)
+        begin
+          if (clk_en_i && (crt_state == IDLE))
+            begin 
+              dividend_ff <= dividend_i;
+              divisor_ff <= divisor_i;
+            end
+        end
 
       always_comb 
         begin : RESULT_SELECTION
           unique case (operation_i)
 
             DIV_:   begin
-                      case ({dividend_i[XLEN - 1], divisor_i[XLEN - 1]})
+                      case ({dividend_ff[XLEN - 1], divisor_ff[XLEN - 1]})
 
                         //If it is (positive X positive) or (negative x negative) don't change sign
                         2'b00, 2'b11:   result_o = quotient;
@@ -198,7 +211,7 @@ module MGT_01_div_unit
             DIVU_:  result_o = quotient;  //Do nothing since the operands are already unsigned
 
             REM_:   begin
-                      case ({dividend_i[XLEN - 1], divisor_i[XLEN - 1]})
+                      case ({dividend_ff[XLEN - 1], divisor_ff[XLEN - 1]})
 
                         //If it is (positive X positive) or (negative x negative) don't change sign
                         2'b00, 2'b11:   result_o = remainder;
