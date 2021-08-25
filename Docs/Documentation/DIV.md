@@ -29,7 +29,7 @@ Cycle time: 10ns.
 Starting in T = 20ns, we perform 100 / 5 integer division, using the above information we'll recive the result at 360ns + 20ns = 380ns. The result will be
 20 if we perform the DIV instruction. After 1 cycle (at 390ns) we can insert other inputs.
 
-![plot](../Images/DIV_tb.png)
+![plot](../Images/DIV_IP_tb.png)
 
 The result after the 37th cycle won't be valid.
 
