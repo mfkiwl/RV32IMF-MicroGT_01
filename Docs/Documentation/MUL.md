@@ -54,7 +54,7 @@ Cycle time: 10ns.
 Starting in T = 0ns, we perform 9 * 10 multiplication (MUL). At T = 40ns we'll have the output (90) available.
 If in T = 10ns we inserted other inputs, at T = 50ns we'll have the result of that multiplication.
 
-![plot](../Images/MUL_IP_tb.png)
+![plot](../Images/MUL_IP_tb.PNG)
 
 ---
 
