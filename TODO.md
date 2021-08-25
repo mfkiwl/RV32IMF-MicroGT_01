@@ -36,7 +36,6 @@ Since this project is in constant evolution at this stage, things already comple
   * Review multiplication unit 
   * Write multiplication unit documentation
   * Review the microarchitecture (possibility of merging **`EX`** and **`MEM`** stages)
-  * Divider unit
   
 <br />
 
@@ -49,3 +48,4 @@ Since this project is in constant evolution at this stage, things already comple
   * Multiplication unit
   * Write register files documentation
   * Write ALU documentation
+  * Divider unit
