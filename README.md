@@ -67,13 +67,13 @@ folder.
   * The **exception detector** monitors the instruction address.
   * The **handler** detect the various interrupt / exception signals and handle them in order.
   * The **FIFO buffer** makes sure that the instructions enter in the **decode** stage sequentially.
+  * The **BTA** (Branch Target Address) is calculated in this stage.
+  * The **branch predictor** is used to choose whether taking a branch or not.
 
 ### **Instruction decode (ID):**
 
   * The **decoder** decodes the instruction generating the various pipeline signals.
   * The **exception detector** monitors the opcodes and the various function fields.
-  * The **BTA** (Branch Target Address) is calculated in this stage.
-  * The **branch predictor** is used to choose whether taking a branch or not.
 
 ### **Instruction issue (IS):**
 
