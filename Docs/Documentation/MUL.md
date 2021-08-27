@@ -6,7 +6,7 @@ The multiply unit is responsable for all the four multiply instructions in the "
 
 The custom module is designed for low resources usage and low area, obviusly because of the tradeoffs it is also relatively slow. It's not
 pipelined, thus it can accept new values only when the unit is `FREE`. It has 16 latency cycles, and it perform both signed and unsigned 
-multiplication. It implement in hardware the Booth radix-4 multiplication algorithm, because of this choice and the fact that is
+multiplication. It implement in hardware the **Booth radix-4 multiplication algorithm**, because of this choice and the fact that is
 not pipelined, this unit as said earlier does not consume much resources.
 
 ---
@@ -15,9 +15,9 @@ not pipelined, this unit as said earlier does not consume much resources.
 
 Cycle time: 10ns.
 
-We start at T = 190ns, performing (100 * -200) and taking the lower 32 bits of the multiplication (`MUL` operation). As said the unit has 16 latency cycles so basically it will produce the result at T = 190ns + (16ns * 10ns) = 350ns. 
+We start at T = 190ns, performing (100 * -200) and taking the lower 32 bits of the multiplication (`MUL` operation). As said the unit has 16 latency cycles so basically it will produce the result at T = 190ns + (16ns * 10ns) -> 350ns. 
 
-![plot](../Images/MUL_tb.PNG)
+![plot](../Images/MUL_tb.png)
 
 At T = 350ns the unit will be `FREE` and **in the same clock cycle it can receive new values**.
 
