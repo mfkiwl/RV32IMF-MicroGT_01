@@ -17,7 +17,7 @@ Cycle time: 10ns.
 
 We start at T = 190ns, performing (100 * -200) and taking the lower 32 bits of the multiplication (`MUL` operation). As said the unit has 16 latency cycles so basically it will produce the result at T = 190ns + (16ns * 10ns) -> 350ns. 
 
-![plot](../Images/MUL_tb.png)
+![plot](../Images/MUL_tb.PNG)
 
 At T = 350ns the unit will be `FREE` and **in the same clock cycle it can receive new values**.
 
