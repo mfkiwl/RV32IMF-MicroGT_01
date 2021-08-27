@@ -12,18 +12,12 @@ Since this project is in constant evolution at this stage, things already comple
 
 ## ❌ TO DO:
 
-  * FPU
-    * Floating point adder
-    * Floating point multiplier
-    * Floating point divider
-    * Floating point square root
-    * Floating point adder
-    * Floating point comparison unit
-    * Floating point sign injection
+  
 
 <br />
 
   * Complete the **`EX`** stage
+  
   * Testing the entire **`EX`** stage.
 
 <br />
@@ -33,9 +27,15 @@ Since this project is in constant evolution at this stage, things already comple
 ## 🟠 IN PROGRESS:
 
   * Replacing all the IP modules
-  * Review multiplication unit 
-  * Write multiplication unit documentation
   * Review the microarchitecture (possibility of merging **`EX`** and **`MEM`** stages)
+  * FPU
+    * Floating point adder
+    * Floating point multiplier
+    * Floating point divider
+    * Floating point square root
+    * Floating point adder
+    * Floating point comparison unit
+    * Floating point sign injection
   
 <br />
 
@@ -48,4 +48,5 @@ Since this project is in constant evolution at this stage, things already comple
   * Multiplication unit
   * Write register files documentation
   * Write ALU documentation
+  * Write multiplication unit documentation
   * Divider unit
