@@ -15,7 +15,7 @@ Cycle time: 10ns.
 
 We start at T = 350ns performing (20 / 2) integer division. The unit has 34 latency cycle so it will produce a *valid* result in T = 350ns + 340ns -> 690ns
 
-![plot](../Images/DIV_tb.png)
+![plot](../Images/DIV_tb.PNG)
 
 At T = 690ns the unit will be `FREE` and **in the same clock cycle it can receive new values**.
 
