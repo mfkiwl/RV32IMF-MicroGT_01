@@ -1,6 +1,36 @@
-# DIVIDE UNIT IP
+# DIVIDE UNIT
 
 The multiply unit is responsable for all the four division instructions in the "M" RISC-V extension.
+
+## **CUSTOM MODULE**
+
+The custom module is designed for low resources usage and low area, obviusly because of the tradeoffs it is also relatively slow. It's not
+pipelined, thus it can accept new values only when the unit is `FREE`. It has 34 latency cycles, and it perform both signed and unsigned division as well as the `MOD` operation (REM in RISC-V or remainder). The module implement the **non restoring division algorithm**, this works on unsigned data, so we must convert all the inputs in unsigned, elaborate them and change the sign of the result accordingly.
+
+---
+
+### **Example:**
+
+Cycle time: 10ns.
+
+We start at T = 350ns performing (20 / 2) integer division. The unit has 34 latency cycle so it will produce a *valid* result in T = 350ns + 340ns -> 690ns
+
+![plot](../Images/DIV_tb.png)
+
+At T = 690ns the unit will be `FREE` and **in the same clock cycle it can receive new values**.
+
+---
+
+The Vivado Synthesis Tool estimate an usage of:
+
+| **Used:**                       | LUT  | LUTRAM |  FF  | BRAM | URAM | DSP |
+| :--------------------------     | :-:  | :----: | :--: | :--: | :-:  | :-: |
+| Divider module                  | 310  |   0    |  108 |  0   |  0   |  0  |
+
+
+
+<br />
+
 
 ## **IP MODULE**
 
