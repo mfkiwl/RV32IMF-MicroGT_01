@@ -36,6 +36,8 @@ Since this project is in constant evolution at this stage, things already comple
     * Floating point adder
     * Floating point comparison unit
     * Floating point sign injection
+
+  * Review MUL / DIV unit valid output
   
 <br />
 
