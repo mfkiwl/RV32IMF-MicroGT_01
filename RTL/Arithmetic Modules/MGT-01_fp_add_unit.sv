@@ -9,11 +9,17 @@
 //                 addition / subtraction on floating point data.             //
 ////////////////////////////////////////////////////////////////////////////////
 
-// NOT TESTED! X
-// NEED REVISION AND OPTIMIZATION
+// NEED REVISION AND OPTIMIZATION 
+// EXPONENT IN ADDITION IS CORRECT
+// EXPONENT IN SUBTRACTION IS NOT ALWAYS CORRECT
+// SIGN IS CORRECT
+// MANTISSA IN ADDITION IS CORRECT
+// MANTISSA IN SUBTRACTION IS NOT CORRECT
 
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
+
+typedef enum logic [1:0] {IDLE, PREPARE, ADDITION, NORMALIZE} fsm_state_e;
 
 module MGT_01_fp_add_unit
 ( //Inputs
@@ -23,20 +29,23 @@ module MGT_01_fp_add_unit
   input  logic            clk_i, clk_en_i,    //Clock signals
 
   input  fsum_ops         operation_i,
-  input  rounding_stage_e round_i, 
+  input  rounding_e       round_i, 
 
   //Outputs
   output float_t          to_round_unit_o,    
   output fu_state_e       fu_state_o,         //Functional unit state
-  output rounding_stage_e round_o, 
+  output rounding_e       round_o, 
   output valid_e          valid_o,
 
   output logic            underflow_o,
   output logic            overflow_o,
-  output logic            invalid_op_o 
+  output logic            invalid_op_o ,
+  
+  output fsm_state_e      fsm,
+  output logic [24:0]     result_mantissa_o
 );
 
-  typedef enum logic [1:0] {IDLE, PREPARE, ADDITION, NORMALIZE} fsm_state_e;
+  
 
   fsm_state_e crt_state, nxt_state;
 
@@ -93,17 +102,17 @@ module MGT_01_fp_add_unit
 
   effective_float_t op_A, op_B;
 
-  //Initialize the data with effective mantissa
+  //Initialize the data with effective mantissa 
 
-  assign op_A = {op_A_i.sign, op_A_i.exponent, 1'b1, op_A_i.mantissa};
+  assign op_A = '{op_A_i.sign, op_A_i.exponent, 1'b1, op_A_i.mantissa};
 
   //The sign bit of the second operand is inverted if the operation is a subtraction
-  assign op_B = (operation_i == FADD_) ? {op_B_i.sign, op_B_i.exponent, 1'b1, op_B_i.mantissa} :
-                                         {~op_B_i.sign, op_B_i.exponent, 1'b1, op_B_i.mantissa};
+  assign op_B = (operation_i == FADD_) ? '{op_B_i.sign, op_B_i.exponent, 1'b1, op_B_i.mantissa} :
+                                         '{~op_B_i.sign, op_B_i.exponent, 1'b1, op_B_i.mantissa};
 
   //Register input/output
   effective_float_t op_A_in, op_A_out, op_B_in, op_B_out;
-  logic [23:0] shifted_mantissa;
+  logic [23:0] shifted_mantissa, shifted_mantissa_out;
   logic [7:0]  exponent_diff;     //Obtained by subtracting the two exponents
     
       always_comb 
@@ -116,8 +125,8 @@ module MGT_01_fp_add_unit
                         end
 
             PREPARE:    begin             //The two numbers have the same exponent
-                          op_A_in = (exponent_diff[7]) ? op_A_out : {op_A_out.sign, op_B_out.exponent, shifted_mantissa};
-                          op_B_in = (exponent_diff[7]) ? {op_B_out.sign, op_A_out.exponent, shifted_mantissa} : op_B_out;
+                          op_A_in = (exponent_diff[7]) ? {op_A_out.sign, op_B_out.exponent, shifted_mantissa} : op_A_out;
+                          op_B_in = (exponent_diff[7]) ? op_B_out : {op_B_out.sign, op_A_out.exponent, shifted_mantissa};
                         end
 
             ADDITION:   begin             //Dont'care, we won't use these values anymore
@@ -160,15 +169,13 @@ module MGT_01_fp_add_unit
   logic [7:0]  norm_exponent;     //Normalized exponent
 
   logic [24:0] result_mantissa;   //result_mantissa[24] is the carry bit
-  logic [24:0] result_mantissa_abs;
+  logic [24:0] result_mantissa_out;   
+  logic [23:0] result_mantissa_abs;
   logic [23:0] norm_mantissa;     //Normalized mantissa
     
   logic        result_sign;       //Sign used for the result
 
-  logic [23:0] mantissa_diff;     //Used to find the result's sign bit
-
-  assign mantissa_diff = op_A.mantissa - op_B.mantissa;   
-  assign exponent_diff = op_A_out.exponent - op_B_out.exponent;
+  logic [23:0] mantissa_diff;     //Used to find the result's sign bit 
 
   logic [4:0]  leading_zero;        //Number of consecutive 0s 
   
@@ -177,25 +184,34 @@ module MGT_01_fp_add_unit
         begin : RESULT_REG
           if (!rst_n)
             result <= 32'b0;    //Reset, in float +0 
-          if (clk_en_i && (crt_state == PREPARE))         //The result's sign and exponent is calculated
-            begin                                         //in the PREPARE stage
-              result.sign <= result_sign;
-              result.exponent <= result_exponent;
-            end
-          else if (clk_en_i && (crt_state == ADDITION))
-            begin
-              result.mantissa <= result_mantissa;
-            end
-          else if (clk_en_i && (crt_state == NORMALIZE))   //Normalized exponent and mantissa are calculated
-            begin                                         //in ADDITION stage
-              result.exponent <= norm_exponent;
-              result.mantissa <= norm_mantissa[22:0];
-            end
+          if (clk_en_i)
+            begin 
+              if (crt_state == PREPARE)         //The result's sign and exponent is calculated
+                begin                           //in the PREPARE stage
+                  result.sign <= result_sign;
+                  result.exponent <= result_exponent;
+                end
+              else if (crt_state == NORMALIZE)  //Normalized exponent and mantissa are calculated
+                begin                           //in NORMALIZE stage
+                  result.exponent <= norm_exponent;
+                  result.mantissa <= norm_mantissa[22:0];
+                end
+            end         
         end : RESULT_REG
+        
+      always_ff @(posedge clk_i)
+        begin
+          if (clk_en_i && (crt_state == ADDITION))
+            result_mantissa_out <= result_mantissa;
+        end
 
-      /////////////////////  
-      // Algorithm logic //
-      /////////////////////
+
+  /////////////////////  
+  // Algorithm logic //
+  /////////////////////
+
+  assign mantissa_diff = op_A.mantissa - op_B.mantissa;   
+  assign exponent_diff = op_A_out.exponent - op_B_out.exponent;
 
       always_comb 
         begin
@@ -250,44 +266,42 @@ module MGT_01_fp_add_unit
 
                   2'b01:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa} - {op_B_out.hidden_bit, op_B_out.mantissa}; 
 
-                  2'b10:   result_mantissa = {op_B_out.hidden_bit, op_B_out.mantissa} - {op_A_out.hidden_bit, op_A_out.mantissa} ;
+                  2'b10:   result_mantissa = {op_B_out.hidden_bit, op_B_out.mantissa} - {op_A_out.hidden_bit, op_A_out.mantissa};
                   
                   2'b11:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa} + {op_B_out.hidden_bit, op_B_out.mantissa};
 
               endcase
             end
-          else if (crt_state == NORMALIZE)
+          else 
             begin
               //Values used to not interfere a latch
-              norm_mantissa = 0;
-              norm_exponent = 0;
               result_exponent = 0;
               shifted_mantissa = 0;
               result_sign = 0;
-              result_mantissa = 0;
+              result_mantissa = result_mantissa_out;
               
               //Compute the absolute value
-              if (result.mantissa[24] == 1'b1)
-                result_mantissa_abs = -result.mantissa;
+              if (result_mantissa_out[23])
+                result_mantissa_abs = -result_mantissa_out;
               else 
-                result_mantissa_abs = result.mantissa;
+                result_mantissa_abs = result_mantissa_out;
 
-              if (~(op_A_out.sign ^ op_B_out.sign))     //XNOR: basically if the sign bit of the operands are the same (is an addition)
+              if (op_A.sign ~^ op_B.sign)       //XNOR: basically if the sign bit of the operands are the same (is an addition)
                 begin
-                  if (result_mantissa_abs[24] == 1'b1)  //There is a carry bit
+                  if (result_mantissa_out[24])  //There is a carry bit
                     begin
-                      norm_mantissa = result_mantissa_abs >> 1;
+                      norm_mantissa = result_mantissa_out >> 1;
                       norm_exponent = result.exponent + 1;
                     end
-                  else                                  //There is NOT a carry bit
+                  else                          //There is NOT a carry bit
                     begin
-                      norm_mantissa = result_mantissa_abs;
+                      norm_mantissa = result_mantissa_out;
                       norm_exponent = result.exponent;
                     end
                 end
               else    //If the operation is a subtraction
                 begin
-                  casez (result_mantissa_abs[23:0])    //Leading zero encoder
+                  unique casez (result_mantissa_abs[23:0])    //Leading zero encoder
 
                     24'b1??????????????????????:  leading_zero = 5'd0;
                     24'b01?????????????????????:  leading_zero = 5'd1;
@@ -314,24 +328,12 @@ module MGT_01_fp_add_unit
                     24'b00000000000000000000001:  leading_zero = 5'd22;
                     24'b00000000000000000000000:  leading_zero = 5'd23;
 
-                    default:                      leading_zero = 5'b0;
-
                   endcase
                   
-                  norm_mantissa = result_mantissa << leading_zero;
+                  norm_mantissa = result_mantissa_abs[23:0] << leading_zero;
                   norm_exponent = result.exponent - leading_zero;
                 end
             end 
-          else 
-            begin
-              //Values used to not interfere a latch
-              norm_mantissa = 0;
-              norm_exponent = 0;
-              result_exponent = 0;
-              shifted_mantissa = 0;
-              result_sign = 0;
-              result_mantissa = 0;
-            end
         end
 
   //////////////////
@@ -339,10 +341,13 @@ module MGT_01_fp_add_unit
   //////////////////
 
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
+  
+  assign fsm = crt_state;
+  assign result_mantissa_o = result_mantissa_out;
 
   assign round_o = round_i;
   
-  assign valid_o = (crt_state == IDLE) ? VALID : INVALID;
+  assign valid_o = ((crt_state == IDLE) && (rst_n_i & rst_n & clk_en_i)) ? VALID : INVALID;
   
       always_comb     //Output selection 
         begin 
@@ -394,10 +399,9 @@ module MGT_01_fp_add_unit
                                     to_round_unit_o = result;
                                     overflow_o  = (result == P_INFTY) ? 1'b1 : 1'b0;
                                     underflow_o = (result == N_INFTY) ? 1'b1 : 1'b0;
-                                    invalid_op_o = 1'b0;
+                                    invalid_op_o = (result == NAN) ? 1'b1 : 1'b0;
                                   end
 
           endcase
         end
-
 endmodule 
