@@ -32,7 +32,7 @@ module MGT_01_f_reg_file
     output float_t      r3_fdata_o
 );
 
-    data_bus_t f_REG_FILE [0:XLEN - 1];   //Register file 
+  data_bus_t f_REG_FILE [0:XLEN - 1];   //Register file 
 
     always_ff @(posedge clk_i)
       begin  
@@ -40,11 +40,11 @@ module MGT_01_f_reg_file
             f_REG_FILE[w_faddr_i] <= wr_fdata_i;  //Write on positive edge of clk
       end
 
-    //Reads are combinatorials
-    assign r1_fdata_o = f_REG_FILE[r1_faddr_i];   
+  //Reads are combinatorials
+  assign r1_fdata_o = f_REG_FILE[r1_faddr_i];   
 
-    assign r2_fdata_o = f_REG_FILE[r2_faddr_i];
+  assign r2_fdata_o = f_REG_FILE[r2_faddr_i];
 
-    assign r3_fdata_o = f_REG_FILE[r3_faddr_i];
+  assign r3_fdata_o = f_REG_FILE[r3_faddr_i];
 
 endmodule
