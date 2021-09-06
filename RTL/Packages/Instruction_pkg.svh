@@ -208,18 +208,18 @@
 
         //Rounding mode field (RV32F) 
         typedef enum logic [2:0] {
-            RNE = 3'b000,     //Round to Nearest, ties to Even
-            RTZ = 3'b001,     //Round Towards Zero
-            RDN = 3'b010,     //Round Down
-            RUP = 3'b011,     //Round Up
-            RMM = 3'b100,     //Round to Nearest, ties to Max Magnitude
-            RDY = 3'b111     //Dynamic rounding mode (check fcsr)
+            RNE_ = 3'b000,     //Round to Nearest, ties to Even
+            RTZ_ = 3'b001,     //Round Towards Zero
+            RDN_ = 3'b010,     //Round Down
+            RUP_ = 3'b011,     //Round Up
+            RMM_ = 3'b100,     //Round to Nearest, ties to Max Magnitude
+            RDY_ = 3'b111      //Dynamic rounding mode (check fcsr)
         } roundmode_funct3_e;
 
         //Floating point funct7 field
         typedef enum logic [6:0] {
             FADD    = 7'b0000000,
-            FSUB    = 7'b0000100,
+            FSUB    = 7'b0000101,
             FMUL    = 7'b0001000,
             FDIV    = 7'b0001100,
             FSQRT   = 7'b0101100,
