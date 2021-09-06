@@ -33,6 +33,8 @@
         
         typedef enum logic {FREE, BUSY} fu_state_e;
 
+        typedef enum logic {VALID, INVALID} valid_e;
+
         typedef logic signed [XLEN - 1:0] data_bus_t;   //Data bus
 
         typedef logic [ADDR_WIDTH - 1:0]  address_bus_t; //Address bus
@@ -75,13 +77,22 @@
     // MUL/DIV parameters and typedef //
     //                                //
     ////////////////////////////////////
+
+        //THESE ARE NOT THE REAL FUNCT3 FIELD VALUES
         
         typedef enum logic [1:0] {  //MUL unit opcodes
-            MUL_U    = 2'b00, 
-            MULH_U   = 2'b01,
-            MULHSU_U = 2'b10,
-            MULHU_U  = 2'b11
+            MUL_    = 2'b00, 
+            MULH_   = 2'b01,
+            MULHSU_ = 2'b10,
+            MULHU_  = 2'b11
         } mul_ops_e;
+
+        typedef enum logic [1:0] {  //DIV unit opcodes
+            DIV_    = 2'b00,
+            DIVU_   = 2'b01,
+            REM_    = 2'b10,
+            REMU_   = 2'b11
+        } div_ops_e;
 
 
     //////////////////////////////
@@ -150,18 +161,33 @@
     //                                        //
     ////////////////////////////////////////////
 
-        parameter RNE = 3'b000;     //Round to Nearest, ties to Even
-        parameter RTZ = 3'b001;     //Round Towards Zero
-        parameter RDN = 3'b010;     //Round Down
-        parameter RUP = 3'b011;     //Round Up
-        parameter RMM = 3'b100;     //Round to Nearest, ties to Max Magnitude
-        parameter RDY = 3'b111;     //Dynamic rounding mode`
+        typedef enum logic [2:0] {
+            RNE = 3'b000,     //Round to Nearest, ties to Even
+            RTZ = 3'b001,     //Round Towards Zero
+            RDN = 3'b010,     //Round Down
+            RUP = 3'b011,     //Round Up
+            RMM = 3'b100,     //Round to Nearest, ties to Max Magnitude
+            RDY = 3'b111      //Dynamic rounding mode
+        } rounding_e;
 
         typedef struct packed {     //IEEE-754 floating point rapresentation standard
             logic        sign;
             logic [7:0]  exponent;
             logic [22:0] mantissa;
         } float_t;
+
+        typedef enum logic {FADD_, FSUB_} fsum_ops;
+
+        parameter BIAS = 127;  
+
+        parameter P_INFTY = 32'h7F800000;   //Positive infinity
+        parameter N_INFTY = 32'hFF800000;   //Negative infinity
+
+        parameter P_ZERO = 32'h00000000;    //Positive zero
+        parameter N_ZERO = 32'h80000000;    //Negative zero
+
+        parameter NAN    = 32'h7fc00000;   //Not a Number
+
 
     endpackage     
 
