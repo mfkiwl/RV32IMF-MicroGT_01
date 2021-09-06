@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Creator:        Gabriele Tripi - gabrieletripi02@gmail.com                 //
 //                                                                            //
-// Design Name:    Integer Register File                                      //
+// Design Name:    Integer Register File FPGA                                 //
 // Project Name:   MicroGT-01                                                 //
 // Language:       SystemVerilog                                              //
 //                                                                            //
@@ -16,6 +16,7 @@ module MGT_01_i_reg_file
 (   //Inputs
     input  logic        clk_i,       //Clock 
     input  logic        we_i,        //Write enable 
+    input  logic        clk_en_i,
 
     input  i_register_e r1_iaddr_i,  //Read addresses
     input  i_register_e r2_iaddr_i,
@@ -35,11 +36,10 @@ module MGT_01_i_reg_file
     
     assign we = (w_iaddr_i == X0) ? 1'b0 : we_i;  //If write address is register x0 don't write 
 
-
     always_ff @(posedge clk_i)
       begin  
-        if (we)
-            i_REG_FILE[w_iaddr_i] <= wr_idata_i;  //Write on positive edge of clk
+        if (we & clk_en_i)
+          i_REG_FILE[w_iaddr_i] <= wr_idata_i;  //Write on positive edge of clk
       end
 
     //Reads are combinatorials
