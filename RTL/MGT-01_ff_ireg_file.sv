@@ -9,6 +9,8 @@
 //                 integer registers. It has 2 read and 1 write ports.        //
 ////////////////////////////////////////////////////////////////////////////////
 
+//NOT TESTED YET
+
 module MGT_01_i_reg_file_FF
 ( //Inputs
   input  logic        clk_i,       //Clock 
