@@ -6,20 +6,12 @@
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    This module contains the hardware necessary to perform a   //
-//                 addition / subtraction on floating point data.             //
+//                 addition / subtraction on floating point data. It produces //
+//                 a valid result in 4 clock cycles.                          //
 ////////////////////////////////////////////////////////////////////////////////
-
-// NEED REVISION AND OPTIMIZATION 
-// EXPONENT IN ADDITION IS CORRECT
-// EXPONENT IN SUBTRACTION IS NOT ALWAYS CORRECT
-// SIGN IS CORRECT
-// MANTISSA IN ADDITION IS CORRECT
-// MANTISSA IN SUBTRACTION IS NOT CORRECT
 
 `include "Primitives/Modules_pkg.svh"
 `include "Primitives/Instruction_pkg.svh"
-
-typedef enum logic [1:0] {IDLE, PREPARE, ADDITION, NORMALIZE} fsm_state_e;
 
 module MGT_01_fp_add_unit
 ( //Inputs
@@ -39,13 +31,10 @@ module MGT_01_fp_add_unit
 
   output logic            underflow_o,
   output logic            overflow_o,
-  output logic            invalid_op_o ,
-  
-  output fsm_state_e      fsm,
-  output logic [24:0]     result_mantissa_o
+  output logic            invalid_op_o 
 );
 
-  
+  typedef enum logic [1:0] {IDLE, PREPARE, ADDITION, NORMALIZE} fsm_state_e;
 
   fsm_state_e crt_state, nxt_state;
 
@@ -58,14 +47,14 @@ module MGT_01_fp_add_unit
   // FSM LOGIC //
   ///////////////
 
-  logic rst_n;  //Reset delayed
-  
+  logic rst_n_dly;  //Reset delayed
+
       // We delay the reset signals by 1 cycle because the FSM should
       // stay 2 cycles in the IDLE stage when resetted
 
       always_ff @(posedge clk_i)
         begin
-          rst_n <= rst_n_i;
+          rst_n_dly <= rst_n_i;
         end
 
       //State register
@@ -82,7 +71,7 @@ module MGT_01_fp_add_unit
         begin
           unique case (crt_state)
 
-            IDLE:       nxt_state = (~rst_n) ? IDLE : PREPARE;
+            IDLE:       nxt_state = (~rst_n_dly) ? IDLE : PREPARE;
 
             PREPARE:    nxt_state = ADDITION;
 
@@ -102,13 +91,18 @@ module MGT_01_fp_add_unit
 
   effective_float_t op_A, op_B;
 
-  //Initialize the data with effective mantissa 
+  logic hidden_a, hidden_b;
 
-  assign op_A = '{op_A_i.sign, op_A_i.exponent, 1'b1, op_A_i.mantissa};
+  //Compute the hidden bit ORing all the bits of the exponent
+  assign hidden_a = |op_A_i.exponent; 
+  assign hidden_b = |op_B_i.exponent;   
+
+  //Initialize the data with effective mantissa 
+  assign op_A = '{op_A_i.sign, op_A_i.exponent, hidden_a, op_A_i.mantissa};
 
   //The sign bit of the second operand is inverted if the operation is a subtraction
-  assign op_B = (operation_i == FADD_) ? '{op_B_i.sign, op_B_i.exponent, 1'b1, op_B_i.mantissa} :
-                                         '{~op_B_i.sign, op_B_i.exponent, 1'b1, op_B_i.mantissa};
+  assign op_B = (operation_i == FADD_) ? '{op_B_i.sign, op_B_i.exponent, hidden_b, op_B_i.mantissa} :
+                                         '{~op_B_i.sign, op_B_i.exponent, hidden_b, op_B_i.mantissa};
 
   //Register input/output
   effective_float_t op_A_in, op_A_out, op_B_in, op_B_out;
@@ -182,7 +176,7 @@ module MGT_01_fp_add_unit
     
       always_ff @(posedge clk_i)
         begin : RESULT_REG
-          if (!rst_n)
+          if (!rst_n_dly)
             result <= 32'b0;    //Reset, in float +0 
           if (clk_en_i)
             begin 
@@ -201,10 +195,9 @@ module MGT_01_fp_add_unit
         
       always_ff @(posedge clk_i)
         begin
-          if (clk_en_i && (crt_state == ADDITION))
+          if (clk_en_i & (crt_state == ADDITION))
             result_mantissa_out <= result_mantissa;
         end
-
 
   /////////////////////  
   // Algorithm logic //
@@ -266,7 +259,7 @@ module MGT_01_fp_add_unit
 
                   2'b01:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa} - {op_B_out.hidden_bit, op_B_out.mantissa}; 
 
-                  2'b10:   result_mantissa = {op_B_out.hidden_bit, op_B_out.mantissa} - {op_A_out.hidden_bit, op_A_out.mantissa};
+                  2'b10:   result_mantissa = -{op_A_out.hidden_bit, op_A_out.mantissa} + {op_B_out.hidden_bit, op_B_out.mantissa};
                   
                   2'b11:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa} + {op_B_out.hidden_bit, op_B_out.mantissa};
 
@@ -279,14 +272,8 @@ module MGT_01_fp_add_unit
               shifted_mantissa = 0;
               result_sign = 0;
               result_mantissa = result_mantissa_out;
-              
-              //Compute the absolute value
-              if (result_mantissa_out[23])
-                result_mantissa_abs = -result_mantissa_out;
-              else 
-                result_mantissa_abs = result_mantissa_out;
 
-              if (op_A.sign ~^ op_B.sign)       //XNOR: basically if the sign bit of the operands are the same (is an addition)
+              if (op_A.sign ~^ op_B.sign)     //XNOR: basically if the sign bit of the operands are the same (is an addition)
                 begin
                   if (result_mantissa_out[24])  //There is a carry bit
                     begin
@@ -301,36 +288,43 @@ module MGT_01_fp_add_unit
                 end
               else    //If the operation is a subtraction
                 begin
-                  unique casez (result_mantissa_abs[23:0])    //Leading zero encoder
+                  //Compute the absolute value
+                  if (result_mantissa_out[24])
+                    result_mantissa_abs = -result_mantissa_out[23:0];
+                  else 
+                    result_mantissa_abs = result_mantissa_out[23:0];
 
-                    24'b1??????????????????????:  leading_zero = 5'd0;
-                    24'b01?????????????????????:  leading_zero = 5'd1;
-                    24'b001????????????????????:  leading_zero = 5'd2;
-                    24'b0001???????????????????:  leading_zero = 5'd3;
-                    24'b00001??????????????????:  leading_zero = 5'd4;
-                    24'b000001?????????????????:  leading_zero = 5'd5;
-                    24'b0000001????????????????:  leading_zero = 5'd6;
-                    24'b00000001???????????????:  leading_zero = 5'd7;
-                    24'b000000001??????????????:  leading_zero = 5'd8;
-                    24'b0000000001?????????????:  leading_zero = 5'd9;
-                    24'b00000000001????????????:  leading_zero = 5'd10;
-                    24'b000000000001???????????:  leading_zero = 5'd11;
-                    24'b0000000000001??????????:  leading_zero = 5'd12;
-                    24'b00000000000001?????????:  leading_zero = 5'd13;
-                    24'b000000000000001????????:  leading_zero = 5'd14;
-                    24'b0000000000000001???????:  leading_zero = 5'd15;
-                    24'b00000000000000001??????:  leading_zero = 5'd16;
-                    24'b000000000000000001?????:  leading_zero = 5'd17;
-                    24'b0000000000000000001????:  leading_zero = 5'd18;
-                    24'b00000000000000000001???:  leading_zero = 5'd19;
-                    24'b000000000000000000001??:  leading_zero = 5'd20;
-                    24'b0000000000000000000001?:  leading_zero = 5'd21;
-                    24'b00000000000000000000001:  leading_zero = 5'd22;
-                    24'b00000000000000000000000:  leading_zero = 5'd23;
+                  unique casez (result_mantissa_abs)    //Leading zero encoder
+
+                    24'b1???????????????????????:  leading_zero = 5'd0;
+                    24'b01??????????????????????:  leading_zero = 5'd1;
+                    24'b001?????????????????????:  leading_zero = 5'd2;
+                    24'b0001????????????????????:  leading_zero = 5'd3;
+                    24'b00001???????????????????:  leading_zero = 5'd4;
+                    24'b000001??????????????????:  leading_zero = 5'd5;
+                    24'b0000001?????????????????:  leading_zero = 5'd6;
+                    24'b00000001????????????????:  leading_zero = 5'd7;
+                    24'b000000001???????????????:  leading_zero = 5'd8;
+                    24'b0000000001??????????????:  leading_zero = 5'd9;
+                    24'b00000000001?????????????:  leading_zero = 5'd10;
+                    24'b000000000001????????????:  leading_zero = 5'd11;
+                    24'b0000000000001???????????:  leading_zero = 5'd12;
+                    24'b00000000000001??????????:  leading_zero = 5'd13;
+                    24'b000000000000001?????????:  leading_zero = 5'd14;
+                    24'b0000000000000001????????:  leading_zero = 5'd15;
+                    24'b00000000000000001???????:  leading_zero = 5'd16;
+                    24'b000000000000000001??????:  leading_zero = 5'd17;
+                    24'b0000000000000000001?????:  leading_zero = 5'd18;
+                    24'b00000000000000000001????:  leading_zero = 5'd19;
+                    24'b000000000000000000001???:  leading_zero = 5'd20;
+                    24'b0000000000000000000001??:  leading_zero = 5'd21;
+                    24'b00000000000000000000001?:  leading_zero = 5'd22;
+                    24'b000000000000000000000001:  leading_zero = 5'd23;
+                    24'b000000000000000000000000:  leading_zero = 5'd24;
 
                   endcase
                   
-                  norm_mantissa = result_mantissa_abs[23:0] << leading_zero;
+                  norm_mantissa = result_mantissa_abs << leading_zero;
                   norm_exponent = result.exponent - leading_zero;
                 end
             end 
@@ -341,13 +335,10 @@ module MGT_01_fp_add_unit
   //////////////////
 
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
-  
-  assign fsm = crt_state;
-  assign result_mantissa_o = result_mantissa_out;
 
   assign round_o = round_i;
-  
-  assign valid_o = ((crt_state == IDLE) && (rst_n_i & rst_n & clk_en_i)) ? VALID : INVALID;
+ 
+  assign valid_o = ((crt_state == IDLE) & rst_n_dly) ? VALID : INVALID;
   
       always_comb     //Output selection 
         begin 
@@ -404,4 +395,5 @@ module MGT_01_fp_add_unit
 
           endcase
         end
+
 endmodule 
