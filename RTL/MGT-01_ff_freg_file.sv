@@ -9,36 +9,38 @@
 //                 floating point registers. It has 3 read and 1 write ports. //            
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+// NOT TESTED YET
+
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 module MGT_01_f_reg_file_FF
-(   //Inputs
-    input  logic        clk_i,       //Clock 
-    input  logic        clk_en_i,
-    input  logic        rst_n_i,
-    input  logic        we_i,        //Write enable
-    input  logic        sel_all_i,   //Select every register
-    input  logic        inout_i,     //Write or read the entire register file
+( //Inputs
+  input  logic        clk_i,       //Clock 
+  input  logic        clk_en_i,
+  input  logic        rst_n_i,
+  input  logic        we_i,        //Write enable
+  input  logic        sel_all_i,   //Select every register
+  input  logic        inout_i,     //Write or read the entire register file
 
-    input  f_register_e r1_faddr_i,  //Read addresses
-    input  f_register_e r2_faddr_i,
-    input  f_register_e r3_faddr_i,
+  input  f_register_e r1_faddr_i,  //Read addresses
+  input  f_register_e r2_faddr_i,
+  input  f_register_e r3_faddr_i,
 
-    input  f_register_e w_faddr_i,   //Write address
+  input  f_register_e w_faddr_i,   //Write address
 
-    input  float_t      wr_fdata_i,
+  input  float_t      wr_fdata_i,
 
-    //Outputs
-    output float_t      r1_fdata_o,  //Read ports
-    output float_t      r2_fdata_o,
-    output float_t      r3_fdata_o,
+  //Outputs
+  output float_t      r1_fdata_o,  //Read ports
+  output float_t      r2_fdata_o,
+  output float_t      r3_fdata_o,
 
-    // Output/input port for the entire register file
-    // used to store or load the entire register 
-    // file in case of interrupt
-    output float_t [XLEN - 1:0] freg_file_out,
-    input  float_t [XLEN - 1:0] freg_file_in
+  // Output/input port for the entire register file
+  // used to store or load the entire register 
+  // file in case of interrupt
+  output float_t [XLEN - 1:0] freg_file_out,
+  input  float_t [XLEN - 1:0] freg_file_in
 );
 
   float_t f_REG_FILE [0:XLEN - 1];   //Register file
