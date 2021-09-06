@@ -16,25 +16,25 @@
 `include "Instruction_pkg.svh"
 
 module MGT_01_alu 
-(   //Inputs
-    input  data_u     op_A_i, op_B_i,            //Operators
-    input  alu_ops_e  ops_i,                     //Operations
+( //Inputs
+  input  data_u     op_A_i, op_B_i,            //Operators
+  input  alu_ops_e  ops_i,                     //Operations
 
-    //Outputs
-    output logic      comparison_o,              //Comparison flag
-    output data_bus_t result_o
+  //Outputs
+  output logic      comparison_o,              //Comparison flag
+  output data_bus_t result_o
 );
 
-    logic is_equal, is_greater_eq;  //Result comparison
-    logic type_data;                //Signed (1) or unsigned (0)
+  logic is_equal, is_greater_eq;  //Result comparison
+  logic type_data;                //Signed (1) or unsigned (0)
 
-    //COMPARE LOGIC
-    assign is_equal = (op_A_i == op_B_i);
+  //COMPARE LOGIC
+  assign is_equal = (op_A_i == op_B_i);
 
-    assign type_data = ops_i[0];  //Signed or unsigned
+  assign type_data = ops_i[0];  //Signed or unsigned
 
-    //                                          Unsigned compares                 Signed compares
-    assign is_greater_eq = type_data ? (op_A_i.u_data >= op_B_i.u_data) : (op_A_i.s_data >= op_B_i.s_data);
+  //                                          Unsigned compares                 Signed compares
+  assign is_greater_eq = type_data ? (op_A_i.u_data >= op_B_i.u_data) : (op_A_i.s_data >= op_B_i.s_data);
 
     always_comb 
       begin : OPERATIONS
