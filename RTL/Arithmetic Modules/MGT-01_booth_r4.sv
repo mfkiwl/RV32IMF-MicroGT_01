@@ -13,7 +13,7 @@
 `include "Primitives/Modules_pkg.svh"
 `include "Primitives/Instruction_pkg.svh"
 
-module MGT_01_mul_unit
+module MGT_01_booth_radix4
 ( //Inputs
   input  logic signed [XLEN - 1:0]        multiplier_i, multiplicand_i, 
 
