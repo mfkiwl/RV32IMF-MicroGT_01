@@ -81,8 +81,9 @@ module MGT_01_booth_radix4
 
           endcase
 
-          //Arithmetic shift for signed numbers. Cast $signed else the >>> operator would synthesize in a LOGICAL shift right.
-          {reg_pair_in._P, reg_pair_in._A, reg_pair_in._L} = $signed({partial_product, reg_pair_out._A, reg_pair_out._L}) >>> 2;
+          //Floating point numbers are stored in signed magnitude form thus the multiplier operate with UNSIGNED values 
+          //so we perform a LOGICAL shift right
+          {reg_pair_in._P, reg_pair_in._A, reg_pair_in._L} = {partial_product, reg_pair_out._A, reg_pair_out._L} >> 2;
 
         end : BOOTH_RULES
 
