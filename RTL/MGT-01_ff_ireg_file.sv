@@ -7,9 +7,9 @@
 //                                                                            //
 // Description:    The register file of MicroGT-01, it contains all the       //
 //                 integer registers. It has 2 read and 1 write ports.        //
+//                 It can store / load the entire register file in 1 clock.   // 
+//                 NOT SUITABLE FOR FPGA!                                     // 
 ////////////////////////////////////////////////////////////////////////////////
-
-// NOT TESTED YET
 
 `include "Modules_pkg.svh"
 `include "Instruction_pkg.svh"
@@ -21,7 +21,6 @@ module MGT_01_i_reg_file_FF
   input  logic        clk_en_i,
   input  logic        rst_n_i,
   input  logic        sel_all_i,   //Select every register
-  input  logic        inout_i,     //Write or read the entire register file
 
   input  i_register_e r1_iaddr_i,  //Read addresses
   input  i_register_e r2_iaddr_i,
@@ -56,7 +55,7 @@ module MGT_01_i_reg_file_FF
               for (int i = 1; i < XLEN; i++)
                 i_REG_FILE[i] <= 32'b0;       
             end
-          if (sel_all_i & inout_i & clk_en_i)    
+          if (sel_all_i & we_i & clk_en_i)    
             begin
               //Load the entire register file
               for (int i = 1; i < XLEN; i++)
