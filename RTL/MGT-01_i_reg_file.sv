@@ -34,7 +34,7 @@ module MGT_01_i_reg_file
     
   logic we;
     
-    assign we = (w_iaddr_i == X0) ? 1'b0 : we_i;  //If write address is register x0 don't write 
+  assign we = (w_iaddr_i == X0) ? 1'b0 : we_i;  //If write address is register x0 don't write 
 
     always_ff @(posedge clk_i)
       begin  
