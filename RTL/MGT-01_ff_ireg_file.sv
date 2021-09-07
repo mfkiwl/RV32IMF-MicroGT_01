@@ -25,7 +25,7 @@ module MGT_01_i_reg_file_FF
   input  i_register_e r1_iaddr_i,  //Read addresses
   input  i_register_e r2_iaddr_i,
 
-  input  i_register_e w_iaddr_i,   //Write address
+  input  i_register_e wr_iaddr_i,   //Write address
 
   input  data_bus_t   wr_idata_i,  //Write port
 
@@ -45,7 +45,7 @@ module MGT_01_i_reg_file_FF
   logic we;
 
   //Do not write anything if the address is the register X0
-  assign we = (w_iaddr_i == X0) ? 1'b0 : 1'b1;
+  assign we = (wr_iaddr_i == X0) ? 1'b0 : 1'b1;
 
       always_ff @(posedge clk_i) 
         begin 
@@ -62,7 +62,7 @@ module MGT_01_i_reg_file_FF
                 i_REG_FILE[i] <= reg_file_in[i];  
             end
           if (we & clk_en_i)
-            i_REG_FILE[w_faddr_i] <= wr_fdata_i;  //Register write
+            i_REG_FILE[wr_iaddr_i] <= wr_idata_i;  //Register write
         end
 
       always_comb 
