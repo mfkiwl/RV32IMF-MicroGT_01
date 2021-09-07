@@ -15,14 +15,14 @@
 
 module MGT_01_booth_radix4
 ( //Inputs
-  input  logic signed [XLEN - 1:0] multiplier_i, multiplicand_i, 
+  input  logic signed [XLEN - 1:0]       multiplier_i, multiplicand_i, 
 
-  input  logic                     clk_i, clk_en_i,               //Clock signals
-  input  logic                     rst_n_i,                       //Reset active low
+  input  logic                           clk_i, clk_en_i,               //Clock signals
+  input  logic                           rst_n_i,                       //Reset active low
   
   //Outputs
-  output logic signed [XLEN - 1:0] result_o,
-  output logic                     valid_o                             
+  output logic signed [(2 * XLEN) - 1:0] result_o,
+  output logic                           valid_o                            
 ); 
 
   typedef struct packed {
@@ -100,7 +100,7 @@ module MGT_01_booth_radix4
             end
         end : COUNTER
 
-  assign result_o = reg_pair_out._A;
+  assign result_o = {reg_pair_out._P[XLEN - 1:0], reg_pair_out._A};
   
   //Counter = 0
   assign valid_o = ~(|counter);
