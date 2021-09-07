@@ -21,13 +21,12 @@ module MGT_01_f_reg_file_FF
   input  logic        rst_n_i,
   input  logic        we_i,        //Write enable
   input  logic        sel_all_i,   //Select every register
-  input  logic        inout_i,     //Write or read the entire register file
 
   input  f_register_e r1_faddr_i,  //Read addresses
   input  f_register_e r2_faddr_i,
   input  f_register_e r3_faddr_i,
 
-  input  f_register_e w_faddr_i,   //Write address
+  input  f_register_e wr_faddr_i,   //Write address
 
   input  float_t      wr_fdata_i,
 
@@ -54,14 +53,14 @@ module MGT_01_f_reg_file_FF
             end 
           if (clk_en_i)
             begin
-              if (sel_all_i & inout_i)    
+              if (sel_all_i & we_i)    
                 begin
                   //Load the entire register file
                   for (int i = 0; i < XLEN; i++)
                     f_REG_FILE[i] <= freg_file_in[i];  
                 end
               if (we_i)   
-                f_REG_FILE[w_faddr_i] <= wr_fdata_i;    //Register write
+                f_REG_FILE[wr_faddr_i] <= wr_fdata_i;    //Register write
             end
         end
 
