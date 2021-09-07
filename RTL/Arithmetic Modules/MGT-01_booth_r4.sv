@@ -22,7 +22,7 @@ module MGT_01_booth_radix4
   
   //Outputs
   output logic signed [XLEN - 1:0] result_o,
-  output valid_e                   valid_o                             
+  output logic                     valid_o                             
 ); 
 
   typedef struct packed {
@@ -101,6 +101,7 @@ module MGT_01_booth_radix4
 
   assign result_o = reg_pair_out._A;
   
-  assign valid_o = (~(|counter)) ? VALID : INVALID;
+  //Counter = 0
+  assign valid_o = ~(|counter);
 
 endmodule
