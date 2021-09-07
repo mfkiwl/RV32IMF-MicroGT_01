@@ -6,10 +6,10 @@
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    The register file of MicroGT-01, it contains all the       //
-//                 floating point registers. It has 3 read and 1 write ports. //            
+//                 floating point registers. It has 3 read and 1 write ports. // 
+//                 It can store / load the entire register file in 1 clock.   // 
+//                 NOT SUITABLE FOR FPGA!                                     //
 ////////////////////////////////////////////////////////////////////////////////
-
-// NOT TESTED YET
 
 `include "Modules_pkg.svh"
 `include "Instruction_pkg.svh"
@@ -36,9 +36,8 @@ module MGT_01_f_reg_file_FF
   output float_t      r2_fdata_o,
   output float_t      r3_fdata_o,
 
-  // Output/input port for the entire register file
-  // used to store or load the entire register 
-  // file in case of interrupt
+  // Output/input port:
+  // used to store or load the entire register file
   output float_t [XLEN - 1:0] freg_file_out,
   input  float_t [XLEN - 1:0] freg_file_in
 );
