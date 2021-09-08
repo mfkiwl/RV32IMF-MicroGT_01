@@ -193,7 +193,7 @@
         parameter P_ZERO = 32'h00000000;    //Positive zero
         parameter N_ZERO = 32'h80000000;    //Negative zero
 
-        parameter NAN = 32'h7fc00000;   //Not a Number
+        parameter NAN = parameter NAN = 32'b?11111111???????????????????????;   //Not a Number
 
 
     endpackage     
