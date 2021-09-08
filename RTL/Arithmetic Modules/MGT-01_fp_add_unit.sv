@@ -82,13 +82,6 @@ module MGT_01_fp_add_unit
           endcase
         end
 
-  typedef struct packed {     
-      logic        sign;
-      logic [7:0]  exponent;
-      logic        hidden_bit;
-      logic [22:0] mantissa;
-  } effective_float_t;
-
   effective_float_t op_A, op_B;
 
   logic hidden_a, hidden_b;
