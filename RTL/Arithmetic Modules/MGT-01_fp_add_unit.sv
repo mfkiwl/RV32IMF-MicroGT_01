@@ -331,7 +331,7 @@ module MGT_01_fp_add_unit
 
   assign round_o = round_i;
  
-  assign valid_o = ((crt_state == IDLE) & rst_n_dly) ? VALID : INVALID;
+  assign valid_o = ((crt_state == IDLE) & clk_en_i) ? VALID : INVALID;
   
       always_comb     //Output selection 
         begin 
