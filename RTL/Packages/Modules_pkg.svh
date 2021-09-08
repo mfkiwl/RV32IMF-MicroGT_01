@@ -30,10 +30,10 @@
         parameter REG_WIDTH   = 5;    //Width of the register address field
         parameter CSR_WIDTH_A = 12;   //Width of the CSR address bus 
         parameter TIMER_WIDTH = 64;   //Width of timers
+        parameter VALID       = 1;
+        parameter INVALID     = 0;
         
         typedef enum logic {FREE, BUSY} fu_state_e;
-
-        typedef enum logic {VALID, INVALID} valid_e;
 
         typedef logic signed [XLEN - 1:0] data_bus_t;   //Data bus
 
@@ -176,6 +176,13 @@
             logic [22:0] mantissa;
         } float_t;
 
+        typedef struct packed {     //Effective floating point rapresentation    
+            logic        sign;
+            logic [7:0]  exponent;
+            logic        hidden_bit;
+            logic [22:0] mantissa;
+        } effective_float_t;
+
         typedef enum logic {FADD_, FSUB_} fsum_ops;
 
         parameter BIAS = 127;  
@@ -186,7 +193,7 @@
         parameter P_ZERO = 32'h00000000;    //Positive zero
         parameter N_ZERO = 32'h80000000;    //Negative zero
 
-        parameter NAN    = 32'h7fc00000;   //Not a Number
+        parameter NAN = 32'h7fc00000;   //Not a Number
 
 
     endpackage     
