@@ -10,8 +10,10 @@
 // Dependencies:   MGT-01_booth_r4.sv                                         //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+// NOT TESTED!
+
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 module MGT_01_fp_mul_unit
 ( //Inputs
