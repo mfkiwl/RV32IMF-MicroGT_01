@@ -26,14 +26,11 @@ Since this project is in constant evolution at this stage, things already comple
 
 ## 🟠 IN PROGRESS:
 
-  * Replacing all the IP modules
-  * Review the microarchitecture (possibility of merging **`EX`** and **`MEM`** stages)
+  * Review the microarchitecture 
   * FPU
-    * Floating point adder
-    * Floating point multiplier
+    * Floating point multiplier (needs to be tested)
     * Floating point divider
     * Floating point square root
-    * Floating point adder
     * Floating point comparison unit
     * Floating point sign injection
 
@@ -52,3 +49,5 @@ Since this project is in constant evolution at this stage, things already comple
   * Write ALU documentation
   * Write multiplication unit documentation
   * Divider unit
+  * Floating point adder
+  * Replace all the IP modules
