@@ -85,7 +85,7 @@ folder.
   * **Merged** with the **`MEM`** stage to allow loads and stores to execute out of order.
   * The **ALU** perform the basic operations.
   * The **MUL/DIV unit** perform multiplication and division. 
-  * The **FPU** perform all the floating poin operations.
+  * The **FPU** perform all the floating point operations.
   * The **Load/Store unit** is divided in to:
     * **Store unit**, it waits until all the instructions are correctly committed to make sure that when an exception rise the memory isn't affected. The unit does this by storing the values in to a **queue**. The queue, sends data to the memory once it recieve the `commit` signal. 
     * **Load unit**, simply load values from the memory, it works closely with the **store queue**. In fact, before accessing the memory, it checks the values stored in the queue.
