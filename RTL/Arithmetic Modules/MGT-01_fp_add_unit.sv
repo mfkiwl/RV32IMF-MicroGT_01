@@ -10,8 +10,8 @@
 //                 a valid result in 4 clock cycles.                          //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 module MGT_01_fp_add_unit
 ( //Inputs
