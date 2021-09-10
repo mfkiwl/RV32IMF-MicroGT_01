@@ -5,13 +5,13 @@
 // Project Name:   MicroGT-01                                                 //
 // Language:       SystemVerilog                                              //
 //                                                                            //
-// Description:    This module contains a generic module that can perform a   // 
-//                 multiplication. It is used for the floating point multiply.//             
+// Description:    This module contains a generic module that can perform a   //
+//                 multiplication. It is used for the floating point multiply.//
 ////////////////////////////////////////////////////////////////////////////////
 
 
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
 
 module MGT_01_booth_radix4
 ( //Inputs
@@ -22,7 +22,7 @@ module MGT_01_booth_radix4
   
   //Outputs
   output logic signed [(2 * XLEN) - 1:0] result_o,
-  output logic                           valid_o                            
+  output logic                           valid_o                             
 ); 
 
   typedef struct packed {
@@ -36,7 +36,7 @@ module MGT_01_booth_radix4
   logic signed [XLEN:0] partial_product;
 
   logic signed [XLEN:0] reg_b_in, reg_b_out;   //Multiplicand register nets
-  
+
   logic [4:0] counter;
   
   //~(|counter) is equal to counter == 0
@@ -101,8 +101,7 @@ module MGT_01_booth_radix4
         end : COUNTER
 
   assign result_o = {reg_pair_out._P[XLEN - 1:0], reg_pair_out._A};
-  
-  //Counter = 0
+
   assign valid_o = ~(|counter);
 
 endmodule
