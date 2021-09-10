@@ -8,7 +8,7 @@
 // Description:    The register file of MicroGT-01, it contains all the       //
 //                 integer registers. It has 2 read and 1 write ports.        //
 //                 It can store / load the entire register file in 1 clock.   // 
-//                 NOT SUITABLE FOR FPGA!                                     // 
+//                 NOT SUITABLE FOR FPGA USE THIS FOR SIMULATION!             // 
 ////////////////////////////////////////////////////////////////////////////////
 
 `include "Modules_pkg.svh"
