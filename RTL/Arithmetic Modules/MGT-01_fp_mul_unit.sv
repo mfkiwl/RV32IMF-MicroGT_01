@@ -10,10 +10,8 @@
 // Dependencies:   MGT-01_booth_r4.sv                                         //
 ////////////////////////////////////////////////////////////////////////////////
 
-// NOT TESTED!
-
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
 
 module MGT_01_fp_mul_unit
 ( //Inputs
@@ -24,7 +22,10 @@ module MGT_01_fp_mul_unit
 
   output float_t    result_o,
   output logic      valid_o,
-  output fu_state_e fu_state_o 
+  output fu_state_e fu_state_o,
+  output logic      overflow_o, 
+  output logic      underflow_o, 
+  output logic      invalid_op_o 
 );
 
   typedef enum logic [1:0] {IDLE, PREPARE, MULTIPLY, NORMALIZE} fsm_state_e;
@@ -82,7 +83,16 @@ module MGT_01_fp_mul_unit
   effective_float_t op_A_in, op_B_in;
   effective_float_t multiplier_out, multiplicand_out;
 
-  float_t result;
+  float_t result, op_A_out, op_B_out;
+
+      always_ff @(posedge clk_i)
+        begin 
+          if ((crt_state == PREPARE) & clk_en_i)
+            begin 
+              op_A_out <= multiplier_i;
+              op_B_out <= multiplicand_i;
+            end
+        end
 
   //OR the exponent to detect if the number is a 0 (hidden bit is 0 too)
   assign op_A_in = {multiplier_i.sign, multiplier_i.exponent, |multiplier_i.exponent, multiplier_i.mantissa};
@@ -155,6 +165,59 @@ module MGT_01_fp_mul_unit
   
   assign valid_o = (crt_state == IDLE) & clk_en_i;
   
-  assign result_o = result;
+      always_comb 
+        begin 
+          casez ({op_A_out, op_B_out})
+
+            {P_INFTY, N_INFTY},
+            {N_INFTY, P_INFTY}
+            {N_INFTY, 32'b?  }
+            {32'b?, N_INFTY  }:   begin 
+                                    result_o = N_INFTY;
+                                    overflow_o = 0;
+                                    underflow_o = 1;
+                                    invalid_op_o = 0;
+                                  end
+            {P_INFTY, P_INFTY}
+            {N_INFTY, N_INFTY}
+            {P_INFTY, 32'b?  }
+            {32'b?, P_INFTY  }:   begin 
+                                    result_o = P_INFTY;
+                                    overflow_o = 1;
+                                    underflow_o = 0;
+                                    invalid_op_o = 0;
+                                  end
+
+            {P_INFTY, ZERO},
+            {ZERO, P_INFTY},
+            {N_INFTY, ZERO},
+            {ZERO, N_INFTY}:      begin 
+                                    result_o = QUIET_NAN;
+                                    overflow_o = 0;
+                                    underflow_o = 0;
+                                    invalid_op_o = 1;
+                                  end
+
+            {SIGN_NAN, 32'b?},
+            {32'b?, SIGN_NAN}:    begin 
+                                    result_o = QUIET_NAN;
+                                    overflow_o = 0;
+                                    underflow_o = 0;
+                                    invalid_op_o = 1;
+                                  end
+
+            default:              begin 
+                                    result_o = result; 
+
+                                    //Exceed max floating point range (overflow on exponent)
+                                    overflow_o = (op_A_out.exponent[7] & op_B_out.exponent[7]) & (~result.exponent[7]);
+
+                                    //If the result is zero while the operand are different or when exponent is zero 
+                                    //but mantissa is not zero (denormalized)
+                                    underflow_o = ((op_A_out != op_B_out) & (~|{result.exponent, result.mantissa})) | ((~|result.exponent) & (|result.mantissa));
+                                    invalid_op_o = ((result == QUIET_NAN) | (result == SIGN_NAN));
+                                  end
+          endcase
+        end
   
 endmodule
