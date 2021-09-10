@@ -15,7 +15,6 @@
 
     package MGT_01_PACKAGE;
         
-
     //////////////////////////////////////////////
     //                                          //
     // General purpouse parameters and typedefs //
