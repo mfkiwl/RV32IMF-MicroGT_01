@@ -1,214 +1,150 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Creator:        Gabriele Tripi - gabrieletripi02@gmail.com                 //
 //                                                                            //
-// Design Name:    Division Unit                                              //
+// Design Name:    Multiplication Unit                                        //
 // Project Name:   MicroGT-01                                                 //
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    This module contains the hardware necessary to perform a   //
-//                 signed/unsigned division. It is not pipelined to           //
-//                 save area and resources. The division is performed using   //
-//                 the non restoring radix-2 division algorithm.              //
+//                 signed/unsigned multiplication. It is not pipelined to     //
+//                 save area and resources. The multiplication is performed   //
+//                 using the Booth radix-4 multiplication algorithm.          //
 ////////////////////////////////////////////////////////////////////////////////
 
 `include "Modules_pkg.svh"
 `include "Instruction_pkg.svh"
 
-module MGT_01_div_unit 
+module MGT_01_mul_unit
 ( //Inputs
-  input  logic signed [XLEN - 1:0]        dividend_i, divisor_i, 
+  input  logic signed [XLEN - 1:0] multiplier_i, multiplicand_i, 
 
-  input  logic                            clk_i, clk_en_i,               //Clock signals
-  input  logic                            rst_n_i,                       //Reset active low
+  input  logic                     clk_i, clk_en_i,               //Clock signals
+  input  logic                     rst_n_i,                       //Reset active low
 
-  input  div_ops_e                        operation_i,
-
+  input  mul_ops_e                 operation_i,
+  
   //Outputs
-  output logic signed [XLEN - 1:0]        result_o,                      
-  output fu_state_e                       fu_state_o,                    //Functional unit state
-  output logic                            zero_divide
+  output logic signed [XLEN - 1:0] result_o,                      
+  output fu_state_e                fu_state_o                     //Functional unit state
 );
 
-  typedef enum logic [1:0] {IDLE, DIVIDE, RESTORING} fsm_state_e;
+//START BOOTH RADIX-4 ALGORITHM 
 
   typedef struct packed {
-      logic signed [XLEN:0]      _P;      //Partial 
-      logic signed [XLEN - 1:0]  _A;      //Dividend
+      logic signed [XLEN:0]      _P;      //Partial product
+      logic signed [XLEN - 1:0]  _A;      //Multiplier
+      logic                      _L;      //Last bit shifted
   } reg_pair_s;
 
-  //Operands conversion in unsigned numbers
+  reg_pair_s reg_pair_in, reg_pair_out;
 
-  logic signed [XLEN - 1:0] dividend, divisor;
+  logic signed [XLEN:0] partial_product;
 
-  assign dividend = dividend_i[XLEN - 1] ? -dividend_i : dividend_i;
-
-  assign divisor = divisor_i[XLEN - 1] ? -divisor_i : divisor_i;
-
-  //Current and next FSM state
-  fsm_state_e crt_state, nxt_state;
-
+  logic signed [XLEN:0] reg_b_in, reg_b_out;   //Multiplicand register nets
+  
   logic [4:0] counter;
   
-  logic rst_n;  //Reset delayed
+  //~(|counter) is equal to counter == 0
   
-      // We delay the reset signals by 1 cycle because the FSM should
-      // stay 2 cycles in the IDLE stage when resetted
+      always_ff @(posedge clk_i)
+        begin 
+          if (!rst_n_i)
+            reg_pair_out <= 0;
+          else if (clk_en_i)  //If the operation has completed accept new values else keep using the old ones
+            reg_pair_out <= (~(|counter)) ? '{33'b0, multiplier_i, 1'b0} : reg_pair_in;
+        end
+
+  assign reg_b_in = {multiplicand_i[XLEN - 1], multiplicand_i};
 
       always_ff @(posedge clk_i)
         begin
-          rst_n <= rst_n_i;
+          if (!rst_n_i)
+            reg_b_out <= 0;
+          else if (~(|counter) & clk_en_i)    //Don't update the register until the operation is completed
+            reg_b_out <= reg_b_in;
         end
 
-      //State register
-      always_ff @(posedge clk_i)
-        begin : STATE_REG
-          if (!rst_n_i)
-            crt_state <= IDLE;
-          else if (clk_en_i)   
-            crt_state <= nxt_state;
-        end : STATE_REG
+      always_comb 
+        begin : BOOTH_RULES
+          unique case ({reg_pair_out._A[1:0], reg_pair_out._L})    //Booth radix-4 rules
 
-      //Counter, it tracks the state of the operation
+            3'b000:           partial_product = reg_pair_out._P + 0;
+
+            3'b001:           partial_product = reg_pair_out._P + reg_b_out;
+            
+            3'b010:           partial_product = reg_pair_out._P + reg_b_out;
+
+            3'b011:           partial_product = reg_pair_out._P + (reg_b_out << 1);   //reg_b_out * 2
+
+            3'b100:           partial_product = reg_pair_out._P - (reg_b_out << 1);   //reg_b_out * 2
+
+            3'b101:           partial_product = reg_pair_out._P - reg_b_out;
+            
+            3'b110:           partial_product = reg_pair_out._P - reg_b_out; 
+            
+            3'b111:           partial_product = reg_pair_out._P + 0;
+
+          endcase
+
+          //Arithmetic shift for signed numbers. Cast $signed else the >>> operator would synthesize in a LOGICAL shift right.
+          {reg_pair_in._P, reg_pair_in._A, reg_pair_in._L} = $signed({partial_product, reg_pair_out._A, reg_pair_out._L}) >>> 2;
+
+        end : BOOTH_RULES
+
       always_ff @(posedge clk_i)
         begin : COUNTER
           if (!rst_n_i)
             counter <= 0;
-          else if (clk_en_i && (crt_state == DIVIDE))
-            counter <= counter + 1;
+          else if (clk_en_i)
+            begin 
+              if (counter == 5'd16)
+                counter <= 0;
+              else 
+                counter <= counter + 1;
+            end
         end : COUNTER
 
-      //Next state logic
-      always_comb 
-        begin
-          unique case (crt_state)
+  logic signed [(XLEN * 2) - 1:0] result_mul;
 
-            IDLE:       nxt_state = (~rst_n) ? IDLE : DIVIDE;
+  //When the functional unit is FREE the result become VALID 
+  assign fu_state_o = (~(|counter)) ? FREE : BUSY;
 
-            DIVIDE:     nxt_state = (&counter) ? RESTORING : DIVIDE;  //If counter is equal to 11111
+  assign result_mul = {reg_pair_out._P[XLEN - 1:0], reg_pair_out._A};
 
-            RESTORING:  nxt_state = IDLE;
+//END BOOTH RADIX-4 ALGORITHM
 
-            default:    nxt_state = IDLE;
-            
-          endcase
-        end
+    always_comb 
+      begin : MULTIPLEXER
+        case (operation_i)
 
-  //Register pair nets (contains both dividend and the partial product)
-  reg_pair_s reg_pair_in, reg_pair_out;
+                    //Take the lower 32 bits
+          MUL_:     result_o = result_mul[XLEN - 1:0];  
 
-  //Shifted dividend
-  logic signed [XLEN - 1:0] A_shifted;
+                    //Take the upper 32 bits
+          MULH_:    result_o = result_mul[63:XLEN];
 
-  //Partial division
-  logic signed [XLEN:0] partial_division, partial_division_shift;
+                    //Take the unsigned upper 32 bits (unsigned X unsigned multiplication)
+          MULHU_:   result_o = result_mul[(XLEN * 2) - 1] ? -result_mul[63:XLEN] : result_mul[63:XLEN];
 
-  //Divisor register nets
-  logic signed [XLEN:0] reg_b_in, reg_b_out;
 
-  assign reg_b_in = {divisor[XLEN - 1], divisor};
+          MULHSU_:  begin 
+                      case({multiplier_i[XLEN - 1], multiplicand_i[XLEN - 1]}) 
+                                   
+                        //Both positive
+                        2'b00:            result_o = result_mul[63:XLEN];
 
-      //Data registers
+                        //Positive, negative
+                        2'b01:            result_o = -result_mul[63:XLEN];
 
-      always_ff @(posedge clk_i)
-        begin : REG_B 
-          if (!rst_n_i)
-            reg_b_out <= 32'b0;
-          else if ((crt_state == IDLE) && clk_en_i)    //Don't update the register until the operation is completed
-            reg_b_out <= reg_b_in;
-        end : REG_B 
+                        //Negative, positive
+                        2'b10:            result_o = result_mul[63:XLEN];
 
-      always_ff @(posedge clk_i)
-        begin : REG_P_A
-          if (!rst_n_i)
-            reg_pair_out <= 0;
-          if (clk_en_i)
-            begin
-              if (crt_state == IDLE)
-                reg_pair_out <= '{33'b0, dividend};
-              else if (crt_state == DIVIDE)
-                reg_pair_out <= reg_pair_in;
-              else 
-                reg_pair_out._P <= reg_pair_in._P;
-            end
-        end : REG_P_A 
+                        //Both negative
+                        2'b11:            result_o = -result_mul[63:XLEN];
 
-  //Algorithm logic
+                      endcase
+                    end
+        endcase
+      end : MULTIPLEXER
 
-  assign {partial_division_shift, A_shifted} = reg_pair_out << 1; //Shift left one
-        
-  assign reg_pair_in._A = {A_shifted[XLEN - 1:1], ~reg_pair_out._P[XLEN]};    //If P[XLEN] == 1 => A[0] = 0 else A[0] = 1;
-  assign reg_pair_in._P = partial_division;
-
-      always_comb 
-        begin : DIVISION_LOGIC
-          if (crt_state == IDLE)
-            begin
-              partial_division = 32'b0; //Initialize to zero 
-            end
-          else if (crt_state == DIVIDE)
-            begin
-              if (reg_pair_out._P[XLEN] == 1'b1)  //If P is negative
-                begin                  
-                  partial_division = partial_division_shift + reg_b_out;  //Add divisor to P
-                end
-              else  //If P is positive
-                begin
-                  partial_division = partial_division_shift - reg_b_out;  //Subtract divisor to P
-                end
-            end
-          else if (crt_state == RESTORING)
-            begin
-              if (reg_pair_out._P[XLEN] == 1'b1)     //If P is negative
-                partial_division = reg_pair_out._P + reg_b_out;
-              else                                    //If P is positive
-                partial_division = reg_pair_out._P + 32'b0;
-            end
-          else //DEFAULT
-            partial_division = 32'b0;
-
-        end : DIVISION_LOGIC
-
-  assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
-
-  //NOR of divisor 
-  assign zero_divide = ~|divisor_i;
-
-  //Result of the divison
-  logic signed [XLEN - 1:0] quotient, remainder;
-
-  assign quotient = A_shifted;
-  assign remainder = reg_pair_out._P[XLEN - 1:0];
-  
-  //Operation register
-  
-  logic signed [XLEN - 1:0] dividend_ff, divisor_ff;
-  
-      always_ff @(posedge clk_i)
-        begin
-          if (clk_en_i && (crt_state == IDLE))
-            begin 
-              dividend_ff <= dividend_i;
-              divisor_ff <= divisor_i;
-            end
-        end
-
-      always_comb 
-        begin : RESULT_SELECTION
-          unique case (operation_i)
-
-            //Perform a XOR between the two sign bit, if they are different invert the result otherwise keep the result
-
-            DIV_:   result_o = (dividend_ff[XLEN - 1] ^ divisor_ff[XLEN - 1]) ? -quotient : quotient;
-
-            DIVU_:  result_o = quotient;  //Do nothing since the operands are already unsigned
-
-            //Perform a XOR between the two sign bit, if they are different invert the result otherwise keep the result
-
-            REM_:   result_o = (dividend_ff[XLEN - 1] ^ divisor_ff[XLEN - 1]) ? -remainder : remainder;
-
-            REMU_:  result_o = remainder;  //Do nothing since the operands are already unsigned
-            
-          endcase
-        end : RESULT_SELECTION
-
-endmodule 
+endmodule
