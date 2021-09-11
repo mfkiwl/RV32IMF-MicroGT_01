@@ -10,8 +10,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
 
 module MGT_01_booth_radix4
 ( //Inputs
@@ -25,6 +25,39 @@ module MGT_01_booth_radix4
   output logic                           valid_o                             
 ); 
 
+  typedef enum logic [1:0] {IDLE, MULTIPLY, VALID} fsm_state_e;
+
+  fsm_state_e crt_state, nxt_state;
+
+  logic rst_n_dly;
+
+      always_ff @(posedge clk_i)
+        begin
+          rst_n_dly <= rst_n_i;
+        end
+
+      always_ff @(posedge clk_i)
+        begin
+          if (!rst_n_i)
+            crt_state <= IDLE;
+          if (clk_en_i)
+            crt_state <= nxt_state;
+        end
+
+      always_comb 
+        begin
+          unique case (crt_state)
+
+            IDLE:     nxt_state = (~rst_n_dly) ? IDLE : MULTIPLY;
+
+            //Stay in multiplication state for 16 cycles
+            MULTIPLY: nxt_state = (&counter) ? VALID : MULTIPLY;
+
+            VALID:    nxt_state = IDLE;
+
+          endcase
+        end
+
   typedef struct packed {
       logic signed [XLEN:0]      _P;      //Partial product
       logic signed [XLEN - 1:0]  _A;      //Multiplier
@@ -37,16 +70,19 @@ module MGT_01_booth_radix4
 
   logic signed [XLEN:0] reg_b_in, reg_b_out;   //Multiplicand register nets
 
-  logic [4:0] counter;
-  
-  //~(|counter) is equal to counter == 0
+  logic [3:0] counter;
   
       always_ff @(posedge clk_i)
         begin 
           if (!rst_n_i)
             reg_pair_out <= 0;
           else if (clk_en_i)  //If the operation has completed accept new values else keep using the old ones
-            reg_pair_out <= (~(|counter)) ? '{33'b0, multiplier_i, 1'b0} : reg_pair_in;
+            begin
+              if (crt_state == IDLE)
+                reg_pair_out <= '{33'b0, multiplier_i, 1'b0};
+              else if (crt_state == MULTIPLY)
+                reg_pair_out <= reg_pair_in;
+            end
         end
 
   assign reg_b_in = {multiplicand_i[XLEN - 1], multiplicand_i};
@@ -55,7 +91,7 @@ module MGT_01_booth_radix4
         begin
           if (!rst_n_i)
             reg_b_out <= 0;
-          else if (~(|counter) & clk_en_i)    //Don't update the register until the operation is completed
+          else if ((crt_state == IDLE) & clk_en_i)    //Don't update the register until the operation is completed
             reg_b_out <= reg_b_in;
         end
 
@@ -83,7 +119,7 @@ module MGT_01_booth_radix4
 
           //Floating point numbers are stored in signed magnitude form thus the multiplier operate with UNSIGNED values 
           //so we perform a LOGICAL shift right
-          {reg_pair_in._P, reg_pair_in._A, reg_pair_in._L} = {partial_product, reg_pair_out._A, reg_pair_out._L} >> 2;
+          reg_pair_in = {partial_product, reg_pair_out._A, reg_pair_out._L} >> 2;
 
         end : BOOTH_RULES
 
@@ -92,16 +128,11 @@ module MGT_01_booth_radix4
           if (!rst_n_i)
             counter <= 0;
           else if (clk_en_i)
-            begin 
-              if (counter == 5'd16)
-                counter <= 0;
-              else 
-                counter <= counter + 1;
-            end
+            counter <= counter + 1;
         end : COUNTER
 
   assign result_o = {reg_pair_out._P[XLEN - 1:0], reg_pair_out._A};
 
-  assign valid_o = ~(|counter);
+  assign valid_o = (crt_state == VALID);
 
 endmodule
