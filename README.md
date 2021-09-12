@@ -23,7 +23,7 @@ Since it's not a completed project, the following text is not 100% correct and i
 # **Overview**
 ---
 
-## **MicroGT-01 top level view:**
+## **MicroGT-01 SoC top level view:**
 
 <br />
 
@@ -31,8 +31,6 @@ Since it's not a completed project, the following text is not 100% correct and i
 
 
 
-
-The bus system is not implemented yet.
 
 The **sensors** comprehend different devices for:
   * CPU energy consumption detection
