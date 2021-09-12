@@ -11,7 +11,7 @@ The core target mainly FPGA's but it can be synthetised into a chip.
 MicroGT_01 **is not designed for commercial purpouse but for educational**, I belive the best method to learn how CPU's work is to design one by yourself! However if you want to 
 use this softcore in your design you are free to do so.
 
-
+ 
 
 ## **WARNING!**
 ---
