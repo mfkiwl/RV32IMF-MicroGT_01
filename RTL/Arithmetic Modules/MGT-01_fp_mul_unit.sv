@@ -11,8 +11,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 `include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
-
+`include "Instruction_pkg.svh"  
+  
 module MGT_01_fp_mul_unit
 ( //Inputs
   input  float_t    multiplier_i, multiplicand_i,
@@ -20,7 +20,8 @@ module MGT_01_fp_mul_unit
   input  logic      clk_i, clk_en_i,               //Clock signals
   input  logic      rst_n_i,                       //Reset active low
 
-  output float_t    result_o,
+  //Outputs
+  output float_t    to_round_unit_o,   //Result 
   output logic      valid_o,
   output fu_state_e fu_state_o,
   output logic      overflow_o, 
@@ -28,10 +29,10 @@ module MGT_01_fp_mul_unit
   output logic      invalid_op_o 
 );
 
-  typedef enum logic [1:0] {IDLE, PREPARE, MULTIPLY, NORMALIZE} fsm_state_e;
+  typedef enum logic [2:0] {IDLE, PREPARE, MULTIPLY, NORMALIZE, VALID} fsm_state_e;
 
   fsm_state_e crt_state, nxt_state;
-
+  
   // IDLE: The unit is waiting for data
   // PREPARE: Preparing the data to be computed (sign extraction, add exponent)
   // ADDITION: Multiply the mantissas
@@ -74,13 +75,15 @@ module MGT_01_fp_mul_unit
             //If the result of the multiplier is valid, go to next state
             MULTIPLY:   nxt_state = valid_mantissa ? NORMALIZE : MULTIPLY; 
 
-            NORMALIZE:  nxt_state = IDLE;
+            NORMALIZE:  nxt_state = VALID;
+
+            VALID:      nxt_state = IDLE;
 
           endcase
         end
 
 
-  effective_float_t op_A_in, op_B_in;
+  effective_float_t multiplier_in, multiplicand_in;
   effective_float_t multiplier_out, multiplicand_out;
 
   float_t result, op_A_out, op_B_out;
@@ -95,9 +98,9 @@ module MGT_01_fp_mul_unit
         end
 
   //OR the exponent to detect if the number is a 0 (hidden bit is 0 too)
-  assign op_A_in = {multiplier_i.sign, multiplier_i.exponent, |multiplier_i.exponent, multiplier_i.mantissa};
+  assign multiplier_in = {multiplier_i.sign, multiplier_i.exponent, |multiplier_i.exponent, multiplier_i.mantissa};
   
-  assign op_B_in = {multiplicand_i.sign, multiplicand_i.exponent, |multiplicand_i.exponent, multiplicand_i.mantissa};
+  assign multiplicand_in = {multiplicand_i.sign, multiplicand_i.exponent, |multiplicand_i.exponent, multiplicand_i.mantissa};
 
       always_ff @(posedge clk_i) 
         begin : DATA_REGISTER
@@ -108,8 +111,8 @@ module MGT_01_fp_mul_unit
             end
           if (clk_en_i & (crt_state == IDLE))
             begin 
-              multiplier_out <= op_A_in;
-              multiplicand_out <= op_B_in;
+              multiplier_out <= multiplier_in;
+              multiplicand_out <= multiplicand_in;
             end
         end : DATA_REGISTER
 
@@ -120,15 +123,24 @@ module MGT_01_fp_mul_unit
 
   logic [22:0] result_mantissa;
 
+  //Enable multiplication
+  logic mult_en;
+
+  assign mult_en = (crt_state == MULTIPLY);
+
     MGT_01_booth_radix4 mantissa_multiplier (
       .multiplier_i   ( {8'b0, multiplier_out.hidden_bit, multiplier_out.mantissa}     ),
       .multiplicand_i ( {8'b0, multiplicand_out.hidden_bit, multiplicand_out.mantissa} ),
       .clk_i          ( clk_i                                                          ),
-      .clk_en_i       ( clk_en_i                                                       ),
+      .clk_en_i       ( mult_en                                                        ),
       .rst_n_i        ( rst_n_i                                                        ),
-      .result_o       ( result_mantissa                                                ),  
+      .result_o       ( result_mantissa_full                                           ),  
       .valid_o        ( valid_mantissa                                                 )
     );
+
+  logic round;
+
+  assign round = |result_mantissa_full[22:0];
 
   logic [7:0] result_exponent, norm_exponent;
   logic       result_sign;
@@ -139,11 +151,11 @@ module MGT_01_fp_mul_unit
   //If the two sign bits are equal: result sign = 0 (positive) else result sign = 1 (negative)
   assign result_sign = multiplier_i.sign ^ multiplicand_i.sign;
 
-  //If the MSB of the multiplied mantissa is 1 shift it by 1 else do nothing (take the [22:0] bits)
-  assign result_mantissa = result_mantissa_full[(XLEN * 2) - 1] ? result_mantissa_full >> 1 : result_mantissa_full;
+  //If the MSB of the multiplied mantissa is 1 shift it by 1 else do nothing (take the [46:25] bits)
+  assign result_mantissa = result_mantissa_full[47] ? result_mantissa_full[45:23] >> 1 : result_mantissa_full[45:23];
 
   //Modify the exponent accordingly 
-  assign norm_exponent = result_mantissa_full[(XLEN * 2) - 1] ? result.exponent + 1 : result.exponent; 
+  assign norm_exponent = result_mantissa_full[47] ? result.exponent + 1 : result.exponent; 
 
       always_ff @(posedge clk_i) 
         begin 
@@ -156,14 +168,20 @@ module MGT_01_fp_mul_unit
             end
           if (clk_en_i & (crt_state == NORMALIZE))
             begin 
-              result.mantissa <= result_mantissa;
+              result.mantissa <= result_mantissa + round;
               result.exponent <= norm_exponent;
             end
         end
 
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
   
-  assign valid_o = (crt_state == IDLE) & clk_en_i;
+  assign valid_o = (crt_state == VALID);
+
+  //Detect if one of the inputs are 0
+  logic zero_detect;
+  
+  //AND the two operand (except the sign) and NOR the result to detect the 0
+  assign zero_detect = ~|({op_A_out.exponent, op_A_out.mantissa} & {op_B_out.exponent, op_B_out.mantissa});
   
       always_comb 
         begin 
@@ -208,7 +226,8 @@ module MGT_01_fp_mul_unit
                                   end
 
             default:              begin 
-                                    result_o = result; 
+                                    //If an input is 0 put in output +-0
+                                    result_o = zero_detect ? {result.sign, 8'b0, 23'b0} : result; 
 
                                     //Exceed max floating point range (overflow on exponent) 
                                     overflow_o = (op_A_out.exponent[7] & op_B_out.exponent[7]) & (~result.exponent[7]);
