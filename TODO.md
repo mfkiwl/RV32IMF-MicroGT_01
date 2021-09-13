@@ -27,8 +27,7 @@ Since this project is in constant evolution at this stage, things already comple
 ## 🟠 IN PROGRESS:
 
   * Review the microarchitecture 
-  * FPU
-    * Floating point multiplier (needs to be tested)
+  * FPU 
     * Floating point divider
     * Floating point square root
     * Floating point comparison unit
@@ -51,3 +50,4 @@ Since this project is in constant evolution at this stage, things already comple
   * Divider unit
   * Floating point adder
   * Replace all the IP modules
+  * Floating point multiplier
