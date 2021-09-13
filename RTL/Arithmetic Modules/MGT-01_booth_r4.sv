@@ -28,7 +28,8 @@ module MGT_01_booth_radix4
   typedef enum logic [1:0] {IDLE, MULTIPLY, VALID} fsm_state_e;
 
   fsm_state_e crt_state, nxt_state;
-
+  
+  logic [3:0] counter;
   logic rst_n_dly;
 
       always_ff @(posedge clk_i)
@@ -70,7 +71,6 @@ module MGT_01_booth_radix4
 
   logic signed [XLEN:0] reg_b_in, reg_b_out;   //Multiplicand register nets
 
-  logic [3:0] counter;
   
       always_ff @(posedge clk_i)
         begin 
