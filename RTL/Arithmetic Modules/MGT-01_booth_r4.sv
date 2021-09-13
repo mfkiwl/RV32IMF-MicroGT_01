@@ -97,29 +97,38 @@ module MGT_01_booth_radix4
 
       always_comb 
         begin : BOOTH_RULES
-          unique case ({reg_pair_out._A[1:0], reg_pair_out._L})    //Booth radix-4 rules
+          if (crt_state == MULTIPLY)
+            begin
+              unique case ({reg_pair_out._A[1:0], reg_pair_out._L})    //Booth radix-4 rules
 
-            3'b000:           partial_product = reg_pair_out._P + 0;
+                3'b000:           partial_product = reg_pair_out._P + 0;
 
-            3'b001:           partial_product = reg_pair_out._P + reg_b_out;
-            
-            3'b010:           partial_product = reg_pair_out._P + reg_b_out;
+                3'b001:           partial_product = reg_pair_out._P + reg_b_out;
+                
+                3'b010:           partial_product = reg_pair_out._P + reg_b_out;
 
-            3'b011:           partial_product = reg_pair_out._P + (reg_b_out << 1);   //reg_b_out * 2
+                3'b011:           partial_product = reg_pair_out._P + (reg_b_out << 1);   //reg_b_out * 2
 
-            3'b100:           partial_product = reg_pair_out._P - (reg_b_out << 1);   //reg_b_out * 2
+                3'b100:           partial_product = reg_pair_out._P - (reg_b_out << 1);   //reg_b_out * 2
 
-            3'b101:           partial_product = reg_pair_out._P - reg_b_out;
-            
-            3'b110:           partial_product = reg_pair_out._P - reg_b_out; 
-            
-            3'b111:           partial_product = reg_pair_out._P + 0;
+                3'b101:           partial_product = reg_pair_out._P - reg_b_out;
+                
+                3'b110:           partial_product = reg_pair_out._P - reg_b_out; 
+                
+                3'b111:           partial_product = reg_pair_out._P + 0;
 
-          endcase
+              endcase
 
-          //Floating point numbers are stored in signed magnitude form thus the multiplier operate with UNSIGNED values 
-          //so we perform a LOGICAL shift right
-          reg_pair_in = {partial_product, reg_pair_out._A, reg_pair_out._L} >> 2;
+              //Floating point numbers are stored in signed magnitude form thus the multiplier operate with SIGNED values 
+              //counting the hidden bit so we perform a ARITHMETIC shift right
+              reg_pair_in = $signed({partial_product, reg_pair_out._A, reg_pair_out._L}) >>> 2;
+
+            end
+          else 
+            begin 
+              //No operation
+              reg_pair_in = 0;
+            end
 
         end : BOOTH_RULES
 
@@ -127,7 +136,7 @@ module MGT_01_booth_radix4
         begin : COUNTER
           if (!rst_n_i)
             counter <= 0;
-          else if (clk_en_i)
+          else if (clk_en_i & (crt_state == MULTIPLY))
             counter <= counter + 1;
         end : COUNTER
 
