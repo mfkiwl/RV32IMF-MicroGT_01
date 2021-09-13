@@ -191,7 +191,7 @@ module MGT_01_fp_mul_unit
             {N_INFTY, P_INFTY},
             {N_INFTY, 32'b?  },
             {32'b?, N_INFTY  }:   begin 
-                                    result_o = N_INFTY;
+                                    to_round_unit_o = N_INFTY;
                                     overflow_o = 0;
                                     underflow_o = 1;
                                     invalid_op_o = 0;
@@ -201,7 +201,7 @@ module MGT_01_fp_mul_unit
             {N_INFTY, N_INFTY},
             {P_INFTY, 32'b?  },
             {32'b?, P_INFTY  }:   begin 
-                                    result_o = P_INFTY;
+                                    to_round_unit_o = P_INFTY;
                                     overflow_o = 1;
                                     underflow_o = 0;
                                     invalid_op_o = 0;
@@ -211,7 +211,7 @@ module MGT_01_fp_mul_unit
             {ZERO, P_INFTY},
             {N_INFTY, ZERO},
             {ZERO, N_INFTY}:      begin 
-                                    result_o = 32'hFFFFFFFF;
+                                    to_round_unit_o = 32'hFFFFFFFF;
                                     overflow_o = 0;
                                     underflow_o = 0;
                                     invalid_op_o = 1;
@@ -219,7 +219,7 @@ module MGT_01_fp_mul_unit
 
             {SIGN_NAN, 32'b?},
             {32'b?, SIGN_NAN}:    begin 
-                                    result_o = 32'hFFFFFFFF;
+                                    to_round_unit_o = 32'hFFFFFFFF;
                                     overflow_o = 0;
                                     underflow_o = 0;
                                     invalid_op_o = 1;
@@ -227,7 +227,7 @@ module MGT_01_fp_mul_unit
 
             default:              begin 
                                     //If an input is 0 put in output +-0
-                                    result_o = zero_detect ? {result.sign, 8'b0, 23'b0} : result; 
+                                    to_round_unit_o = zero_detect ? {result.sign, 8'b0, 23'b0} : result; 
 
                                     //Exceed max floating point range (overflow on exponent) 
                                     overflow_o = (op_A_out.exponent[7] & op_B_out.exponent[7]) & (~result.exponent[7]);
