@@ -10,6 +10,8 @@
 // Dependencies:   MGT-01_nr_divider.sv                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
+//NOT TESTED
+
 `include "Primitives/Modules_pkg.svh"
 `include "Primitives/Instruction_pkg.svh"
 
