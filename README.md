@@ -23,12 +23,11 @@ Since it's not a completed project, the following text is not 100% correct and i
 # **Overview**
 ---
 
-## **MicroGT-01 SoC top level view:**
+## **MicroGT-01 *processor* top level view:**
 
 <br />
 
   ![plot](Docs/Images/Top.png)
-
 
 
 
