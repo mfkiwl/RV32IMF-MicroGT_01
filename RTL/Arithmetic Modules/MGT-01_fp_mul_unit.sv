@@ -6,8 +6,12 @@
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    This unit perform a simple floating point multiplication.  //
+//                 you can select the radix 4 one if you want to lower the    //
+//                 resources usage. Select the radix 16 one if you want       //
+//                 performance.                                               //
 //                                                                            //
-// Dependencies:   MGT-01_booth_r4.sv                                         //
+// Dependencies:   MGT-01_booth_radix4.sv                                     //
+//                 MGT-01_booth_radix16.sv                                    //
 ////////////////////////////////////////////////////////////////////////////////
 
 `include "Modules_pkg.svh"
