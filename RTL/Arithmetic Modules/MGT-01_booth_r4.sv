@@ -6,12 +6,13 @@
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    This module contains a generic module that can perform a   //
-//                 multiplication. It is used for the floating point multiply.//
+//                 multiplication. It is used for the floating point          //
+//                 LOW PERFORMANCE multiplication.                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
 
 module MGT_01_booth_radix4
 ( //Inputs
