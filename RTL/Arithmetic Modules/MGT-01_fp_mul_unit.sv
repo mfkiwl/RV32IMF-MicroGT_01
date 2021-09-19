@@ -128,16 +128,38 @@ module MGT_01_fp_mul_unit
 
   assign mult_en = (crt_state == MULTIPLY);
 
-    MGT_01_booth_radix4 mantissa_multiplier (
-      .multiplier_i   ( {8'b0, multiplier_out.hidden_bit, multiplier_out.mantissa}     ),
-      .multiplicand_i ( {8'b0, multiplicand_out.hidden_bit, multiplicand_out.mantissa} ),
-      .clk_i          ( clk_i                                                          ),
-      .clk_en_i       ( mult_en                                                        ),
-      .rst_n_i        ( rst_n_i                                                        ),
-      .result_o       ( result_mantissa_full                                           ),  
-      .valid_o        ( valid_mantissa                                                 )
-    );
+  //Select the module to instantiate
+  generate 
 
+    if (PERFORMANCE)
+      begin
+        MGT_01_booth_radix16 mantissa_multiplier (
+          .multiplier_i   ( {8'b0, multiplier_out.hidden_bit, multiplier_out.mantissa}     ),
+          .multiplicand_i ( {8'b0, multiplicand_out.hidden_bit, multiplicand_out.mantissa} ),
+          .clk_i          ( clk_i                                                          ),
+          .clk_en_i       ( mult_en                                                        ),
+          .rst_n_i        ( rst_n_i                                                        ),
+          .result_o       ( result_mantissa_full                                           ),  
+          .valid_o        ( valid_mantissa                                                 ),
+          .fu_state_o     (           /* THIS WON'T BE CONNECTED TO ANYTHING*/             )
+        );
+      end
+    else 
+      begin 
+        MGT_01_booth_radix4 mantissa_multiplier (
+          .multiplier_i   ( {8'b0, multiplier_out.hidden_bit, multiplier_out.mantissa}     ),
+          .multiplicand_i ( {8'b0, multiplicand_out.hidden_bit, multiplicand_out.mantissa} ),
+          .clk_i          ( clk_i                                                          ),
+          .clk_en_i       ( mult_en                                                        ),
+          .rst_n_i        ( rst_n_i                                                        ),
+          .result_o       ( result_mantissa_full                                           ),  
+          .valid_o        ( valid_mantissa                                                 ),
+          .fu_state_o     (           /* THIS WON'T BE CONNECTED TO ANYTHING*/             )
+        );
+      end
+
+  endgenerate
+  
   logic round;
 
   assign round = |result_mantissa_full[22:0];
