@@ -14,7 +14,24 @@
   `define PACKAGES_DONE
 
     package MGT_01_PACKAGE;
-        
+
+    //////////////////////////////////////////////
+    //                                          //
+    //       CPU parameters and typedefs        //
+    //                                          //
+    //////////////////////////////////////////////
+
+        parameter XLEN        = 32;   //Width of an X register
+        parameter REG_WIDTH   = 5;    //Width of the register address field
+        parameter CSR_WIDTH_A = 12;   //Width of the CSR address bus 
+        parameter TIMER_WIDTH = 64;   //Width of timers
+        parameter ADDR_WIDTH  = 17;   //Address width
+
+        // The design contains some alternatives for the various modules.
+        // Select PERFORMANCE = 1 if you want to use high performance - high resources usage modules
+        // Select PERFORMANCE = 0 if you want to use low performance - low resources usage modules
+        parameter PERFORMANCE = 1;
+
     //////////////////////////////////////////////
     //                                          //
     // General purpouse parameters and typedefs //
@@ -22,13 +39,8 @@
     //////////////////////////////////////////////
 
         parameter TRUE        = 1;
-        parameter FALSE       = 0;
-        parameter XLEN        = 32;   //Width of an X register
-        parameter ADDR_WIDTH  = 17;   //Address width
-        parameter OP_WIDTH    = 7;    //Width of the opcode field
-        parameter REG_WIDTH   = 5;    //Width of the register address field
-        parameter CSR_WIDTH_A = 12;   //Width of the CSR address bus 
-        parameter TIMER_WIDTH = 64;   //Width of timers
+        parameter FALSE       = 0;        
+        parameter OP_WIDTH    = 7;    //Width of the opcode field        
         parameter VALID       = 1;
         parameter INVALID     = 0;
         
@@ -37,7 +49,6 @@
         typedef logic signed [XLEN - 1:0] data_bus_t;   //Data bus
 
         typedef logic [ADDR_WIDTH - 1:0]  address_bus_t; //Address bus
-
 
     /////////////////////////////////
     //                             //
