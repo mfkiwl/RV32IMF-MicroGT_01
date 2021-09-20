@@ -51,9 +51,9 @@ module MGT_01_alu
 
           ALU_SRA:     result_o = op_A_i >>> op_B_i;
 
-          ALU_AND:    result_o = op_A_i & op_B_i;
+          ALU_AND:     result_o = op_A_i & op_B_i;
 
-          ALU_OR:     result_o = op_A_i | op_B_i;
+          ALU_OR:      result_o = op_A_i | op_B_i;
 
           ALU_XOR:     result_o = op_A_i ^ op_B_i; 
 
