@@ -2,7 +2,7 @@
 
 Github: (https://github.com/GabbedT/RV32IMAF-MicroGT_01)
 
-MicroGT-01 is my first core designed in SystemVerilog. It is a 32bit OoO execution, dual-issue RISC-V core, multithreaded, 5 **main** stages deep pipeline, designed for low energy consumption. Outside the core, there are two caches and a module for I/O and memory management. 
+MicroGT-01 is my first core designed in SystemVerilog. It is a 32bit OoO execution, dual-issue RISC-V core, 5 **main** stages deep pipeline, designed for low energy consumption. Outside the core, there are two caches and a module for I/O and memory management. 
 
 
 It is possible to implement it on a Xilinx FPGA, for example a [Basys 3](https://store.digilentinc.com/basys-3-artix-7-fpga-beginner-board-recommended-for-introductory-users/).  
