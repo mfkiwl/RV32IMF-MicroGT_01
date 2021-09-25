@@ -43,6 +43,10 @@ module MGT_01_nr_divider (
 
   assign divisor = divisor_i;
 
+  ///////////////
+  // FSM LOGIC //
+  ///////////////
+
   //Current and next FSM state
   fsm_state_e crt_state, nxt_state;
 
@@ -106,8 +110,10 @@ module MGT_01_nr_divider (
 
   assign reg_b_in = {divisor[24], divisor};
 
-      //Data registers
-
+  ////////////////////
+  // Data registers //
+  ////////////////////
+  
       always_ff @(posedge clk_i)
         begin : REG_B 
           if (!rst_n_i)
@@ -169,7 +175,7 @@ module MGT_01_nr_divider (
             partial_division = reg_pair_out._P;
         end : DIVISION_LOGIC
 
-  
+  //NOR of divisor 
   assign zero_divide_o = ~|divisor_i;
 
   assign quotient_o = reg_pair_out._A;
