@@ -10,8 +10,8 @@
 // Dependencies:   MGT-01_nr_divider.sv                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Modules_pkg.svh"
-`include "Instruction_pkg.svh"
+`include "Primitives/Modules_pkg.svh"
+`include "Primitives/Instruction_pkg.svh"
   
 module MGT_01_fp_div_unit
 ( //Inputs
@@ -103,6 +103,10 @@ module MGT_01_fp_div_unit
   assign dividend_in = {dividend_i.sign, dividend_i.exponent, |dividend_i.exponent, dividend_i.mantissa};
   
   assign divisor_in = {divisor_i.sign, divisor_i.exponent, |divisor_i.exponent, divisor_i.mantissa};
+
+  ////////////////////
+  // Data registers //
+  ////////////////////
   
       always_ff @(posedge clk_i) 
         begin : DATA_REGISTER
@@ -120,6 +124,10 @@ module MGT_01_fp_div_unit
 
   logic [24:0] result_mantissa;
   logic [23:0] norm_mantissa;
+
+  /////////////////////
+  // Algorithm logic //
+  /////////////////////
 
   //Enable the division
   logic div_en;
