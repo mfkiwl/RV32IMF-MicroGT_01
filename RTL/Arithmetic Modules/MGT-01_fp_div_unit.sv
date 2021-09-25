@@ -10,8 +10,8 @@
 // Dependencies:   MGT-01_nr_divider.sv                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
   
 module MGT_01_fp_div_unit
 ( //Inputs
