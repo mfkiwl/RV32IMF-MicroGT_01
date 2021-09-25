@@ -197,13 +197,19 @@
 
         parameter logic [7:0] BIAS = 127;  
 
+        //INFINITY
+
         parameter P_INFTY = 32'h7F800000;   //Positive infinity
         parameter N_INFTY = 32'hFF800000;   //Negative infinity
         parameter INFINITY = 32'b?1111111100000000000000000000000;  //Generic infinity
 
+        //ZERO
+
         parameter P_ZERO = 32'h00000000;    //Positive zero
         parameter N_ZERO = 32'h80000000;    //Negative zero
         parameter ZERO = 32'b?0000000000000000000000000000000;  //Generic zero
+
+        //NAN
 
         parameter QUIET_NAN = 32'b111111111???????????????????????; //Not a Number
         parameter Q_NAN = 32'hFFFFFFFF;
