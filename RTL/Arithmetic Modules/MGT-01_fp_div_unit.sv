@@ -10,17 +10,15 @@
 // Dependencies:   MGT-01_nr_divider.sv                                       //
 ////////////////////////////////////////////////////////////////////////////////
 
-//NOT TESTED
-
 `include "Modules_pkg.svh"
 `include "Instruction_pkg.svh"
-
+  
 module MGT_01_fp_div_unit
 ( //Inputs
   input  float_t    dividend_i, divisor_i, 
 
-  input  logic      clk_i, clk_en_i,               //Clock signals
-  input  logic      rst_n_i,                       //Reset active low
+  input  logic      clk_i, clk_en_i,   //Clock signals
+  input  logic      rst_n_i,           //Reset active low
 
   //Outputs
   output float_t    to_round_unit_o,   //Result 
@@ -29,7 +27,7 @@ module MGT_01_fp_div_unit
   output logic      overflow_o, 
   output logic      underflow_o, 
   output logic      invalid_op_o,
-  output logic      zero_divide_o 
+  output logic      zero_divide_o
 );
 
   typedef enum logic [2:0] {IDLE, PREPARE, DIVIDE, NORMALIZE, VALID} fsm_state_e;
@@ -77,7 +75,7 @@ module MGT_01_fp_div_unit
             PREPARE:    nxt_state = DIVIDE; 
 
             //If the result of the divider is valid, go to next state
-            DIVIDE:     nxt_state = valid_mantissa ? NORMALIZE : DIVIDE; 
+            DIVIDE:     nxt_state = (valid_mantissa) ? NORMALIZE : DIVIDE; 
 
             NORMALIZE:  nxt_state = VALID;
 
@@ -120,88 +118,70 @@ module MGT_01_fp_div_unit
             end
         end : DATA_REGISTER
 
-  //Result of the 32x32 divider
-  logic [XLEN - 1:0] result_mantissa_full;
-
-  logic [23:0] result_mantissa, norm_mantissa;
+  logic [24:0] result_mantissa;
+  logic [23:0] norm_mantissa;
 
   //Enable the division
   logic div_en;
 
-  assign div_en = (crt_state == DIVIDE);
+  assign div_en = (crt_state == DIVIDE) & clk_en_i;
 
   MGT_01_nr_divider mantissa_divider (
-    .dividend_i    ( {8'b0, dividend_out.hidden_bit, dividend_out.mantissa} ),
-    .divisor_i     ( {8'b0, divisor_out.hidden_bit, divisor_out.mantissa}   ),
+    .dividend_i    ({1'b0, dividend_out.hidden_bit, dividend_out.mantissa}  ),
+    .divisor_i     ({1'b0, divisor_out.hidden_bit, divisor_out.mantissa}    ),
     .clk_i         ( clk_i                                                  ),
     .clk_en_i      ( div_en                                                 ),
     .rst_n_i       ( rst_n_i                                                ),
-    .quotient_o    ( result_mantissa_full                                   ),
+    .quotient_o    ( result_mantissa                                        ),
+    .remainder_o   (           /* WON'T BE CONNECTED TO ANYTHING*/          ),
     .valid_o       ( valid_mantissa                                         ),
     .zero_divide_o ( zero_divide_mantissa                                   )
   );
   
   assign valid_o = (crt_state == VALID);
   
-  assign fu_state = (crt_state == IDLE) ? FREE : BUSY;
+  assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
 
-  logic [7:0] result_exponent, result_exponent_bias, norm_exponent;
+  logic [7:0] result_exponent, norm_exponent;
   logic       result_sign;
   logic [4:0] leading_zero;
 
   //XOR the sign bits: if different the sign bit is 1 (-) else the sign bit is (+)
   assign result_sign = dividend_out.sign ^ divisor_out.sign;
 
-  //Valid bits are [23:0] (comprehend the hidden bit)
-  assign result_mantissa = result_mantissa_full[23:0];
-
   //Subtract the exponents since it is a division
-  assign result_exponent = dividend_out.exponent - divisor_out.exponent;
-
-      always_comb
-        begin : BIAS_LOGIC
-          case ({dividend_out.exponent[7], divisor_out.exponent[7]})
-
-            // Because the sign are the same and we are performing a division we are doing (EXa + BIAS) - (EXb + BIAS) = EXa - EXb
-            // Thus we need to add the bias to obtain the biased exponent
-            2'b00, 2'b11: result_exponent_bias = result_exponent + BIAS;
-
-            // Because the sign are different and we are performing a division we are doing (EXa + BIAS) + (EXb + BIAS) = EXa + EXb + 2*BIAS
-            // Thus we need to subtract the bias to obtain the biased exponent
-            2'b10, 2'b01: result_exponent_bias = result_exponent - BIAS;
-
-          endcase
-        end : BIAS_LOGIC
+  assign result_exponent = (dividend_out.exponent - divisor_out.exponent) + BIAS;
 
       always_comb
         begin : NORMALIZE_LOGIC
           unique casez (result_mantissa)    //Leading zero encoder
 
-            24'b1???????????????????????:  leading_zero = 5'd0;
-            24'b01??????????????????????:  leading_zero = 5'd1;
-            24'b001?????????????????????:  leading_zero = 5'd2;
-            24'b0001????????????????????:  leading_zero = 5'd3;
-            24'b00001???????????????????:  leading_zero = 5'd4;
-            24'b000001??????????????????:  leading_zero = 5'd5;
-            24'b0000001?????????????????:  leading_zero = 5'd6;
-            24'b00000001????????????????:  leading_zero = 5'd7;
-            24'b000000001???????????????:  leading_zero = 5'd8;
-            24'b0000000001??????????????:  leading_zero = 5'd9;
-            24'b00000000001?????????????:  leading_zero = 5'd10;
-            24'b000000000001????????????:  leading_zero = 5'd11;
-            24'b0000000000001???????????:  leading_zero = 5'd12;
-            24'b00000000000001??????????:  leading_zero = 5'd13;
-            24'b000000000000001?????????:  leading_zero = 5'd14;
-            24'b0000000000000001????????:  leading_zero = 5'd15;
-            24'b00000000000000001???????:  leading_zero = 5'd16;
-            24'b000000000000000001??????:  leading_zero = 5'd17;
-            24'b0000000000000000001?????:  leading_zero = 5'd18;
-            24'b00000000000000000001????:  leading_zero = 5'd19;
-            24'b000000000000000000001???:  leading_zero = 5'd20;
-            24'b0000000000000000000001??:  leading_zero = 5'd21;
-            24'b00000000000000000000001?:  leading_zero = 5'd22;
-            24'b000000000000000000000001:  leading_zero = 5'd23;
-            24'b000000000000000000000000:  leading_zero = 5'd24;
+            25'b1????????????????????????:  leading_zero = 5'd0;
+            25'b01???????????????????????:  leading_zero = 5'd1;
+            25'b001??????????????????????:  leading_zero = 5'd2;
+            25'b0001?????????????????????:  leading_zero = 5'd3;
+            25'b00001????????????????????:  leading_zero = 5'd4;
+            25'b000001???????????????????:  leading_zero = 5'd5;
+            25'b0000001??????????????????:  leading_zero = 5'd6;
+            25'b00000001?????????????????:  leading_zero = 5'd7;
+            25'b000000001????????????????:  leading_zero = 5'd8;
+            25'b0000000001???????????????:  leading_zero = 5'd9;
+            25'b00000000001??????????????:  leading_zero = 5'd10;
+            25'b000000000001?????????????:  leading_zero = 5'd11;
+            25'b0000000000001????????????:  leading_zero = 5'd12;
+            25'b00000000000001???????????:  leading_zero = 5'd13;
+            25'b000000000000001??????????:  leading_zero = 5'd14;
+            25'b0000000000000001?????????:  leading_zero = 5'd15;
+            25'b00000000000000001????????:  leading_zero = 5'd16;
+            25'b000000000000000001???????:  leading_zero = 5'd17;
+            25'b0000000000000000001??????:  leading_zero = 5'd18;
+            25'b00000000000000000001?????:  leading_zero = 5'd19;
+            25'b000000000000000000001????:  leading_zero = 5'd20;
+            25'b0000000000000000000001???:  leading_zero = 5'd21;
+            25'b00000000000000000000001??:  leading_zero = 5'd22;
+            25'b000000000000000000000001?:  leading_zero = 5'd23;
+            25'b0000000000000000000000001:  leading_zero = 5'd24;
+            25'b0000000000000000000000000:  leading_zero = 5'd25;
 
           endcase
                   
@@ -220,21 +200,24 @@ module MGT_01_fp_div_unit
               if (crt_state == PREPARE)
                 begin 
                   result.sign <= result_sign;
-                  result.exponent <= result_exponent_bias;
+                  result.exponent <= result_exponent;
                 end
               else if (crt_state == NORMALIZE)
                 begin 
                   result.exponent <= norm_exponent;
-                  result.mantissa <= norm_mantissa[22:0];
+                  result.mantissa <= norm_mantissa[23:1];
                 end
             end
         end
 
-  assign zero_divide_o = zero_divide_mantissa & (~|divisor_out.exponent);
+  logic zero_divide;
+
+  assign zero_divide = zero_divide_mantissa & (~|divisor_out.exponent);
+  assign zero_divide_o = zero_divide;
 
       always_comb
-        begin 
-          casez ({dividend_out, divisor_out})
+        begin     //Don't consider the hidden bit
+          casez ({{dividend_out.sign, dividend_out.exponent, dividend_out.mantissa}, {divisor_out.sign, divisor_out.exponent, divisor_out.mantissa}})
 
             {ZERO, ZERO},
             {INFINITY, INFINITY}:   begin 
@@ -245,16 +228,16 @@ module MGT_01_fp_div_unit
                                     end
 
             {32'b?, P_INFTY}:       begin 
-                                      to_round_unit_o = P_ZERO;
+                                      to_round_unit_o = (dividend_out.sign) ? N_ZERO : P_ZERO;
                                       overflow_o = 1'b0;
-                                      underflow_o = 1'b0;
+                                      underflow_o = 1'b1;
                                       invalid_op_o = 1'b0;
                                     end
 
             {32'b?, N_INFTY}:       begin 
-                                      to_round_unit_o = N_ZERO;
+                                      to_round_unit_o = (dividend_out.sign) ? P_ZERO : N_ZERO;
                                       overflow_o = 1'b0;
-                                      underflow_o = 1'b0;
+                                      underflow_o = 1'b1;
                                       invalid_op_o = 1'b0;
                                     end
 
@@ -264,20 +247,23 @@ module MGT_01_fp_div_unit
                                       overflow_o = 1'b0;
                                       underflow_o = 1'b0;
                                       invalid_op_o = 1'b1;
-                                    end
+                                  end
 
-            default:                begin 
-                                      //Exclude the sign bit
-                                      to_round_unit_o = (~|dividend_out[30:0]) ? 32'b0 : result;
-  
-                                      //If the exponent of the dividend is positive and the divisor one's is negative (Ex: +2*10^9 / 2*10^-5 = 2*10^14)
-                                      //If the result exponent is negative that means we have an overflow
-                                      overflow_o = (dividend_out.exponent[7] & (~divisor_out.exponent[7])) & (~result.exponent[7]);
+            default:              begin 
+                                    //Exclude the sign bit
+                                    to_round_unit_o = (zero_divide) ? {result_sign, 31'h7F800000} : result;
 
-                                      //If the exponent of the result has all bits cleared and the mantissa's bits are not we have an underflow
-                                      underflow_o = (~|result.exponent) & (|result.mantissa);              
-                                      invalid_op_o = 1'b0;
-                                    end
+                                    //If the dividend's exponent is positive and the divisor one's is negative (Ex: +2*10^9 / 2*10^-5 = 2*10^14)
+                                    // AND
+                                    //If the result's exponent is negative that means we have an overflow
+                                    overflow_o = (dividend_out.exponent[7] & (~divisor_out.exponent[7])) & (~result.exponent[7]);
+
+                                    //If the divisor's exponent is positive and the dividend's exponent is negative
+                                    // AND
+                                    //If the exponent of the result has all bits cleared and the mantissa's bits are not we have an underflow
+                                    underflow_o = ((~|result.exponent) & (|result.mantissa)) & (divisor_out.exponent[7] & (~dividend_out.exponent[7]));              
+                                    invalid_op_o = 1'b0;
+                                  end
           endcase
         end
 
