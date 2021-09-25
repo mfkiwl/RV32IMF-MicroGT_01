@@ -195,17 +195,20 @@
 
         typedef enum logic {FADD_, FSUB_} fsum_ops;
 
-        parameter BIAS = 127;  
+        parameter logic [7:0] BIAS = 127;  
 
         parameter P_INFTY = 32'h7F800000;   //Positive infinity
         parameter N_INFTY = 32'hFF800000;   //Negative infinity
+        parameter INFINITY = 32'b?1111111100000000000000000000000;  //Generic infinity
 
         parameter P_ZERO = 32'h00000000;    //Positive zero
         parameter N_ZERO = 32'h80000000;    //Negative zero
         parameter ZERO = 32'b?0000000000000000000000000000000;  //Generic zero
 
         parameter QUIET_NAN = 32'b111111111???????????????????????; //Not a Number
+        parameter Q_NAN = 32'hFFFFFFFF;
         parameter SIGN_NAN = 32'b011111111???????????????????????;  //Not a Number
+        parameter S_NAN = 32'h7FFFFFFF;
 
     endpackage     
 
