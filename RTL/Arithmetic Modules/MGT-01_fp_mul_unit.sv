@@ -39,7 +39,7 @@ module MGT_01_fp_mul_unit
   
   // IDLE: The unit is waiting for data
   // PREPARE: Preparing the data to be computed (sign extraction, add exponent)
-  // ADDITION: Multiply the mantissas
+  // MULTIPLY: Multiply the mantissas
   // NORMALIZE: Normalize the result
 
   ///////////////
@@ -130,9 +130,8 @@ module MGT_01_fp_mul_unit
   //Enable multiplication
   logic mult_en;
 
-  assign mult_en = (crt_state == MULTIPLY);
+  assign mult_en = (crt_state == MULTIPLY) & clk_en_i;
 
-  //Select the module to instantiate
   generate 
 
     if (PERFORMANCE)
@@ -145,7 +144,7 @@ module MGT_01_fp_mul_unit
           .rst_n_i        ( rst_n_i                                                        ),
           .result_o       ( result_mantissa_full                                           ),  
           .valid_o        ( valid_mantissa                                                 ),
-          .fu_state_o     (           /* THIS WON'T BE CONNECTED TO ANYTHING*/             )
+          .fu_state_o     (             /* WON'T BE CONNECTED TO ANYTHING*/                )
         );
       end
     else 
@@ -158,12 +157,12 @@ module MGT_01_fp_mul_unit
           .rst_n_i        ( rst_n_i                                                        ),
           .result_o       ( result_mantissa_full                                           ),  
           .valid_o        ( valid_mantissa                                                 ),
-          .fu_state_o     (           /* THIS WON'T BE CONNECTED TO ANYTHING*/             )
+          .fu_state_o     (             /* WON'T BE CONNECTED TO ANYTHING*/                )
         );
       end
 
   endgenerate
-  
+
   logic round;
 
   assign round = |result_mantissa_full[22:0];
@@ -218,9 +217,9 @@ module MGT_01_fp_mul_unit
             {N_INFTY, 32'b?  },
             {32'b?, N_INFTY  }:   begin 
                                     to_round_unit_o = N_INFTY;
-                                    overflow_o = 0;
-                                    underflow_o = 1;
-                                    invalid_op_o = 0;
+                                    overflow_o = 1'b0;
+                                    underflow_o = 1'b1;
+                                    invalid_op_o = 1'b0;
                                   end
 
             {P_INFTY, P_INFTY},
@@ -228,27 +227,24 @@ module MGT_01_fp_mul_unit
             {P_INFTY, 32'b?  },
             {32'b?, P_INFTY  }:   begin 
                                     to_round_unit_o = P_INFTY;
-                                    overflow_o = 1;
-                                    underflow_o = 0;
-                                    invalid_op_o = 0;
+                                    overflow_o = 1'b1;
+                                    underflow_o = 1'b0;
+                                    invalid_op_o = 1'b0;
                                   end
 
-            {P_INFTY, ZERO},
-            {ZERO, P_INFTY},
-            {N_INFTY, ZERO},
-            {ZERO, N_INFTY}:      begin 
-                                    to_round_unit_o = 32'hFFFFFFFF;
-                                    overflow_o = 0;
-                                    underflow_o = 0;
-                                    invalid_op_o = 1;
+            {ZERO, INFINITY}:     begin 
+                                    to_round_unit_o = Q_NAN;
+                                    overflow_o = 1'b0;
+                                    underflow_o = 1'b0;
+                                    invalid_op_o = 1'b1;
                                   end
 
             {SIGN_NAN, 32'b?},
             {32'b?, SIGN_NAN}:    begin 
-                                    to_round_unit_o = 32'hFFFFFFFF;
-                                    overflow_o = 0;
-                                    underflow_o = 0;
-                                    invalid_op_o = 1;
+                                    to_round_unit_o = Q_NAN;
+                                    overflow_o = 1'b0;
+                                    underflow_o = 1'b0;
+                                    invalid_op_o = 1'b1;
                                   end
 
             default:              begin 
@@ -258,10 +254,9 @@ module MGT_01_fp_mul_unit
                                     //Exceed max floating point range (overflow on exponent) 
                                     overflow_o = (op_A_out.exponent[7] & op_B_out.exponent[7]) & (~result.exponent[7]);
 
-                                    //If the result is zero while the operand are different or when exponent is zero 
-                                    //but mantissa is not zero (denormalized)
-                                    underflow_o = ((op_A_out != op_B_out) & (~|{result.exponent, result.mantissa})) | ((~|result.exponent) & (|result.mantissa));
-                                    invalid_op_o = ((result == QUIET_NAN) | (result == SIGN_NAN));
+                                    //If both the operands have negative exponent and the result's exponent is zero but the mantissa is not zero
+                                    underflow_o = ((~op_A_out.exponent[7]) & (~op_B_out.exponent[7])) & ((~|result.exponent) & (|result.mantissa));
+                                    invalid_op_o = 1'b0;
                                   end
           endcase
         end
