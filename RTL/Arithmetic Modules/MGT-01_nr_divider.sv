@@ -162,7 +162,7 @@ module MGT_01_nr_divider (
             begin
               if (reg_pair_out._P[25] == 1'b1)     //If P is negative
                 partial_division = reg_pair_out._P + reg_b_out;
-              else                                   //If P is positive
+              else                                 //If P is positive
                 partial_division = reg_pair_out._P + 0;
             end
           else //DEFAULT
