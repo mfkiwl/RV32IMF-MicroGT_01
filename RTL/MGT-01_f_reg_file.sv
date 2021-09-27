@@ -9,8 +9,8 @@
 //                 floating point registers. It has 6 read and 2 write ports. //            
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"
-`include "Primitives/Instruction_pkg.svh"
+`include "Modules_pkg.svh"
+`include "Instruction_pkg.svh"
 
 module MGT_01_f_reg_file #(
   parameter WRITE_PORTS = 2,
