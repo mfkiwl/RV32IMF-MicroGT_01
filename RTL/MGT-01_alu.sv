@@ -9,7 +9,6 @@
 //                 and logic operation, compares and build 32 bit immediate.  //
 //                 The ALU doesn't update flags on every operation but only   //
 //                 on compares.                                               //
-//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 `include "Modules_pkg.svh"
