@@ -142,4 +142,4 @@ All the documents are in the Docs folder in this repository, here you can find d
 
 Jhon L. Hennessy, David A. Patterson, N 2017, *Computer Architecture: A Quantitative Approach, Sixth Edition*, Morgan Kaufmann Publishers
 
-R. Hasan and S. Mahmood, "Survey and evaluation of simulators suitable for teaching for computer architecture and organization Supporting undergraduate students at Sir Syed University of Engineering & Technology," Proceedings of 2012 UKACC International Conference on Control, 2012, pp. 1043-1045, doi: 10.1109/CONTROL.2012.6334776.
+Yamin Li and Wanming Chu, "A new non-restoring square root algorithm and its VLSI implementations," Proceedings International Conference on Computer Design. VLSI in Computers and Processors, 1996, pp. 538-544, doi: 10.1109/ICCD.1996.563604.
