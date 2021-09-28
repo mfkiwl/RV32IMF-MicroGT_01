@@ -14,8 +14,8 @@
 // Authors: Yamin Li, Wanming Chu  
 // Link: https://ieeexplore.ieee.org/abstract/document/563604  
 
-`include "Primitives/Modules_pkg.svh"     
-`include "Primitives/Instruction_pkg.svh" 
+`include "Modules_pkg.svh"     
+`include "Instruction_pkg.svh" 
 
 module MGT_01_nr_sqrt #(
   parameter DATA_WIDTH = 24,
