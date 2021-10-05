@@ -6,36 +6,36 @@
 // Language:       SystemVerilog                                               //
 //                                                                             //
 // Description:    This module contains a generic module that can perform the  //
-//                 square root of an UNSIGNED N bit number. It is used for the //
-//                 floating point square root module.                          //
+//                 square root of an UNSIGNED N bit number. It can be used for //
+//                 integer computations and floating point square root.        //
 /////////////////////////////////////////////////////////////////////////////////
 
 // Reference: A New Non-Restoring Square Root Algorithm and Its VLSI Implementations
 // Authors: Yamin Li, Wanming Chu  
 // Link: https://ieeexplore.ieee.org/abstract/document/563604  
 
-`include "Modules_pkg.svh"     
-`include "Instruction_pkg.svh" 
+`include "Primitives/Modules_pkg.svh"     
+`include "Primitives/Instruction_pkg.svh" 
 
 module MGT_01_nr_sqrt #(
-  parameter DATA_WIDTH = 24,
-  parameter OUT_WIDTH = DATA_WIDTH / 2
+  parameter DATA_WIDTH = 48
 )
 ( //Inputs
-  input  logic                    clk_i,    
-  input  logic                    clk_en_i,
-  input  logic                    rst_n_i,
+  input  logic                          clk_i,    
+  input  logic                          clk_en_i,
+  input  logic                          rst_n_i,     //Reset active low
 
-  input  logic [DATA_WIDTH - 1:0] radicand_i,
+  input  logic [DATA_WIDTH - 1:0]       radicand_i,
 
   //Outputs
-  output logic [OUT_WIDTH - 1:0]  root_o, 
-  output logic [OUT_WIDTH:0]      remainder_o,  
+  output logic [(DATA_WIDTH / 2) - 1:0] root_o,      //Result
+  output logic [(DATA_WIDTH / 2):0]     remainder_o,  
   
-  output logic                    valid_o
+  output logic                          valid_o
 );
 
-  localparam logic [$clog2(OUT_WIDTH) - 1:0] ITERATIONS = OUT_WIDTH;
+  //Number of iterations that this module have to perform to return a valid value
+  localparam ITERATIONS = (DATA_WIDTH) / 2;
 
   ///////////////
   // FSM LOGIC //
@@ -43,9 +43,14 @@ module MGT_01_nr_sqrt #(
 
   typedef enum logic [1:0] {IDLE, SQRT, RESTORING, VALID} fsm_state_e;
 
+  // IDLE: The unit is waiting for data
+  // SQRT: Perform the square root
+  // RESTORING: Restore the result
+  // VALID: The output is valid
+
   fsm_state_e crt_state, nxt_state;
 
-  logic [$clog2(OUT_WIDTH) - 1:0] counter;
+  logic [$clog2(ITERATIONS) - 1:0] counter;
 
   logic rst_n_dly;  //Reset delayed
 
@@ -69,8 +74,8 @@ module MGT_01_nr_sqrt #(
       //Counter, it tracks the state of the operation
       always_ff @(posedge clk_i)
         begin : COUNTER
-          if (!rst_n_i | (~|counter))
-            counter <= ITERATIONS;
+          if (!rst_n_i | (crt_state == IDLE))
+            counter <= ITERATIONS - 1;
           else if (clk_en_i && (crt_state == SQRT))
             counter <= counter - 1; 
         end : COUNTER
@@ -95,12 +100,13 @@ module MGT_01_nr_sqrt #(
   // Data registers //
   ////////////////////
 
-  logic    [OUT_WIDTH - 1:0] root_in, root_out;           //Q
-  logic signed [OUT_WIDTH:0] remainder_in, remainder_out; //R
-  logic   [DATA_WIDTH - 1:0] radicand_in, radicand_out;   //D
+  //Flip-Flops nets
+  logic    [DATA_WIDTH - 1:0] root_in, root_out;           //Q
+  logic    [DATA_WIDTH:0] remainder_in, remainder_out;     //R
+  logic    [DATA_WIDTH - 1:0] radicand_in, radicand_out;   //D
   
-  logic signed [OUT_WIDTH:0] remainder_rest;
-  
+  logic signed [DATA_WIDTH:0] remainder_rest;
+
   assign radicand_in = radicand_i;
    
       always_ff @(posedge clk_i)
@@ -142,41 +148,41 @@ module MGT_01_nr_sqrt #(
   /////////////////////
 
   //To store counter + counter or 2 * counter
-  logic [$clog2(OUT_WIDTH):0] counter_2;   
+  logic [$clog2(ITERATIONS):0] counter_2;   
 
-  assign counter_2 = counter << 1;
+  assign counter_2 = counter + counter;
 
-  logic signed [OUT_WIDTH:0]  rem_new; 
+  logic [DATA_WIDTH:0]  rem_new; 
 
       always_comb
         begin : ALGORITHM_LOGIC
           //If the remainder is negative
-          if (remainder_out[OUT_WIDTH])
+          if (remainder_out[DATA_WIDTH])
             begin 
-              rem_new = (remainder_out << 2) | ((radicand_out >> counter_2) & 2'd3);
+              rem_new = (remainder_out << 2) | ((radicand_out >> counter_2) & 'd3);
 
-              remainder_in = rem_new + ((root_out << 2) | 2'd3);
+              remainder_in = rem_new + ((root_out << 2) | 'd3);
             end
-          //If the remainder is positive
+          //If the remainder is positive or zero
           else
             begin 
-              rem_new = (remainder_out << 2) | ((radicand_out >> counter_2) & 2'd3);
+              rem_new = (remainder_out << 2) | ((radicand_out >> counter_2) & 'd3);
 
-              remainder_in = rem_new - ((root_out << 2) | 1'b1);
+              remainder_in = rem_new - ((root_out << 2) | 'b1);
             end
 
           //If the remainder is negative
-          if (remainder_in[OUT_WIDTH])
+          if (remainder_in[DATA_WIDTH])
             root_in = (root_out << 1);
           //If the remainder is positive
           else
-            root_in = (root_out << 1) | 1'b1;
+            root_in = (root_out << 1) | 'b1;
         end : ALGORITHM_LOGIC
 
   //Restoring logic
 
   //If the remainder is negative => RESTORE else don't change anything
-  assign remainder_rest = remainder_out[OUT_WIDTH] ? (remainder_out + ((root_out << 1'b1) | 1'b1)) : remainder_out; 
+  assign remainder_rest = remainder_out[DATA_WIDTH] ? (remainder_out + ((root_out << 1'b1) | 'b1)) : remainder_out; 
 
   ////////////////////
   //  Output logic  //
