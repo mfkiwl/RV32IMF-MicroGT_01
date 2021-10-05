@@ -6,8 +6,8 @@
 // Language:       SystemVerilog                                               //
 //                                                                             //
 // Description:    This module contains a generic module that can perform the  //
-//                 square root of an UNSIGNED N bit number. It can be used for //
-//                 integer computations and floating point square root.        //
+//                 square root of an UNSIGNED N bit number. It is used for the //
+//                 floating point square root module.                          //
 /////////////////////////////////////////////////////////////////////////////////
 
 // Reference: A New Non-Restoring Square Root Algorithm and Its VLSI Implementations
@@ -41,7 +41,7 @@ module MGT_01_nr_sqrt #(
   // FSM LOGIC //
   ///////////////
 
-  typedef enum logic [1:0] {IDLE, SQRT, RESTORING, VALID} fsm_state_e;
+  typedef enum logic [2:0] {IDLE, SQRT, RESTORING, VALID} fsm_state_e;
 
   // IDLE: The unit is waiting for data
   // SQRT: Perform the square root
@@ -92,6 +92,8 @@ module MGT_01_nr_sqrt #(
             RESTORING:  nxt_state = VALID;
 
             VALID:      nxt_state = IDLE;
+
+            default:    nxt_state = IDLE;
             
           endcase
         end
@@ -150,7 +152,7 @@ module MGT_01_nr_sqrt #(
   //To store counter + counter or 2 * counter
   logic [$clog2(ITERATIONS):0] counter_2;   
 
-  assign counter_2 = counter + counter;
+  assign counter_2 = counter << 1;
 
   logic [DATA_WIDTH:0]  rem_new; 
 
@@ -194,4 +196,4 @@ module MGT_01_nr_sqrt #(
 
   assign root_o = root_out;
   
-endmodule 
+endmodule
