@@ -10,10 +10,8 @@
 // Dependencies:   MGT-01_nr_sqrt.sv                                          //
 ////////////////////////////////////////////////////////////////////////////////
 
-`include "Primitives/Modules_pkg.svh"     
-`include "Primitives/Instruction_pkg.svh" 
-
-typedef enum logic [1:0] {IDLE, SQRT, VALID} fsm_state_e;
+`include "Modules_pkg.svh"     
+`include "Instruction_pkg.svh" 
 
 module MGT_01_fp_sqrt_unit 
 ( //Inputs
@@ -30,23 +28,20 @@ module MGT_01_fp_sqrt_unit
   output fu_state_e fu_state_o,
   output logic      invalid_op_o,
   output logic      overflow_o,
-  output logic      underflow_o,
-  output fsm_state_e fsm
+  output logic      underflow_o
 );
 
   ///////////////
   // FSM LOGIC //
   ///////////////
 
-
+  typedef enum logic [1:0] {IDLE, SQRT, VALID} fsm_state_e;
 
   // IDLE: The unit is waiting for data 
   // SQRT: Perform the square root
   // VALID: The output is valid
 
   fsm_state_e crt_state, nxt_state;
-
-  assign fsm = crt_state;
 
   logic valid_mantissa;   //The result out of the sqrt block is valid
 
