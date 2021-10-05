@@ -1,4 +1,4 @@
-# **MicroGT-01 RISC-V SOFTCORE**
+# **MicroGT-01 RISC-V CORE**
 
 Github: (https://github.com/GabbedT/RV32IMAF-MicroGT_01)
 
