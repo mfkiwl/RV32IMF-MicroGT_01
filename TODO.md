@@ -28,7 +28,6 @@ Since this project is in constant evolution at this stage, things already comple
 
   * Review the microarchitecture 
   * FPU 
-    * Floating point square root
     * Floating point comparison unit
     * Floating point sign injection
 
@@ -51,3 +50,4 @@ Since this project is in constant evolution at this stage, things already comple
   * Replace all the IP modules
   * Floating point multiplier
   * Floating point divider
+  * Floating point square root
