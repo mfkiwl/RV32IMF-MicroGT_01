@@ -3,8 +3,9 @@
 module MGT_01_nr_sqrt_tb ();
 
   localparam T = 10;
-  localparam DATA_WIDTH = 24;
+  localparam DATA_WIDTH = 48;
   localparam OUT_WIDTH = DATA_WIDTH / 2;
+  localparam ITERATIONS = (DATA_WIDTH) / 2;
 
   //Inputs
   logic                    clk_i;    
@@ -15,7 +16,7 @@ module MGT_01_nr_sqrt_tb ();
 
   //Outputs
   logic [OUT_WIDTH - 1:0]  root_o; 
-  logic [OUT_WIDTH - 1:0]  remainder_o;  
+  logic [OUT_WIDTH:0]      remainder_o;  
   
   logic                    valid_o;
 
@@ -44,21 +45,21 @@ module MGT_01_nr_sqrt_tb ();
       
       clk_en_i = 1;
       rst_n_i = 1;
-      radicand_i = 'd4;
+      radicand_i = {24'b011011100100010110100010, 24'b0}; //6.892 mantissa, CORRECT
 
-      #(T * 15);
+      #(T * 27);
 
-      radicand_i = 'd16;
+      radicand_i = {24'b100111000101010100101111, 24'b0}; //10005.29596 mantissa, CORRECT
+      
+      #(T * 27);
 
-      #(T * 15);
+      radicand_i = {24'b100000000000000000000000, 24'b0}; //2 mantissa, CORRECT
+      
+      #(T * 27);
 
-      radicand_i = 'd35;
+      radicand_i = {24'b100101001010001010111101, 24'b0}; //148.6357 mantissa, CORRECT
 
-      #(T * 15);
-
-      radicand_i = -'d16;
-
-      #(T * 20);
+      #(T * 27);
 
       $stop;
     end
