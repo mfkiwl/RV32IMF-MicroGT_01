@@ -41,7 +41,7 @@ module MGT_01_nr_sqrt #(
   // FSM LOGIC //
   ///////////////
 
-  typedef enum logic [2:0] {IDLE, SQRT, RESTORING, VALID} fsm_state_e;
+  typedef enum logic [1:0] {IDLE, SQRT, RESTORING, VALID} fsm_state_e;
 
   // IDLE: The unit is waiting for data
   // SQRT: Perform the square root
