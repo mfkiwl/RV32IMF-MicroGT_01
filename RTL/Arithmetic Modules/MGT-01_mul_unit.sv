@@ -72,31 +72,33 @@ module MGT_01_mul_unit
     always_comb 
       begin : OUTPUT_LOGIC
         case (operation_i)
-
+        //Booth algorithm works only on signed numbers, so adjust the result accordingly!
+          
                     //Take the lower 32 bits
           MUL_:     result_o = result_mul[XLEN - 1:0];  
 
                     //Take the upper 32 bits
           MULH_:    result_o = result_mul[63:XLEN];
 
-                    //Take the unsigned upper 32 bits (unsigned X unsigned multiplication)
+                    //Take the unsigned upper 32 bits (UNSIGNED X UNSIGNED multiplication)
           MULHU_:   result_o = result_mul[(XLEN * 2) - 1] ? -result_mul[63:XLEN] : result_mul[63:XLEN];
 
 
-          MULHSU_:  begin 
+          MULHSU_:  begin
+                    //MULHSU is a multiplication: SIGNED x UNSIGNED
                       case({multiplier_i[XLEN - 1], multiplicand_i[XLEN - 1]}) 
                                    
-                        //Both positive
+                        //Positive, positive
                         2'b00:            result_o = result_mul[63:XLEN];
 
-                        //Positive, negative
+                        //Positive, positive
                         2'b01:            result_o = -result_mul[63:XLEN];
 
                         //Negative, positive
-                        2'b10:            result_o = result_mul[63:XLEN];
+                        2'b10:            result_o = -result_mul[63:XLEN];
 
-                        //Both negative
-                        2'b11:            result_o = -result_mul[63:XLEN];
+                        //Negative, positive
+                        2'b11:            result_o = result_mul[63:XLEN];
 
                       endcase
                     end
