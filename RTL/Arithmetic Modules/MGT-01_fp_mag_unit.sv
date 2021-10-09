@@ -165,7 +165,7 @@ module MGT_01_fp_mag_unit
           
           //If it's negative infinity or denormalized
           underflow_o = ((~|to_round_unit.exponent) & (|to_round_unit.mantissa)) 
-                        | ((to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa));
+                        | (to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa));
 
           //If only one is a NaN 
           if (is_nan_A ^ is_nan_B)
