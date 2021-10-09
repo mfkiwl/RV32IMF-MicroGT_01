@@ -31,7 +31,8 @@ module MGT_01_fp_mag_unit
 
   //Result of the comparison
   float_t cmp_result;
-
+  float_t to_round_unit;
+  
   ////////////////////
   // Data registers //
   ////////////////////
@@ -152,50 +153,56 @@ module MGT_01_fp_mag_unit
 
   assign is_infty_A = (&operand_A_ff.exponent) & (~|operand_A_ff.mantissa);
   assign is_infty_B = (&operand_B_ff.exponent) & (~|operand_B_ff.mantissa);
-
+  
       always_comb
         begin : OUTPUT_LOGIC
-
-          invalid_op_o = is_sign_A | is_sign_B;
-          overflow_o = (is_infty_A & !operand_A_ff.sign) | (is_infty_B & !operand_B_ff.sign);
-          underflow_o = ((~|cmp_result_ff.exponent) & (|cmp_result_ff.mantissa)) 
-                        | ((operand_A_ff.sign & (&operand_A_ff.exponent) & (~|operand_A_ff.mantissa)) 
-                        | (operand_B_ff.sign & (&operand_B_ff.exponent) & (~|operand_B_ff.mantissa)));
+          
+          //If result is a signaling NaN
+          invalid_op_o = to_round_unit.sign & (&to_round_unit.exponent) & (|to_round_unit.mantissa);
+          
+          //If it's positive infinity
+          overflow_o = to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa);
+          
+          //If it's negative infinity or denormalized
+          underflow_o = ((~|to_round_unit.exponent) & (|to_round_unit.mantissa)) 
+                        | ((to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa));
 
           //If only one is a NaN 
           if (is_nan_A ^ is_nan_B)
             begin
-              to_round_unit_o = not_a_nan;
+              to_round_unit = not_a_nan;
             end
           //If both are NaNs
           else if (is_nan_A & is_nan_B)
             begin 
-              to_round_unit_o = CANO_NAN;
+              to_round_unit = CANO_NAN;
             end
           //If they are both infinities
           else if (is_infty_A & is_infty_B)
             begin 
               //If operation is FMAX and both are negative => out = N_INFINITY
-              to_round_unit_o = ((operation_ff == FMAX_) & (operand_A_ff.sign & operand_B_ff.sign)) ? N_INFTY : P_INFTY; 
+              to_round_unit = ((operation_ff == FMAX_) & (operand_A_ff.sign & operand_B_ff.sign)) ? N_INFTY : P_INFTY; 
             end
           else if (is_infty_A ^ is_infty_B)
             begin 
               if (is_infty_A & (!is_infty_B))
                 begin 
                   //If A is a positive infinity and operation is FMAX or if If A is a negative infinity and operation is FMIN
-                  to_round_unit_o = ((operation_ff == FMAX_) ~^ (!operand_A_ff.sign)) ? operand_A_ff : operand_B_ff;
+                  to_round_unit = ((operation_ff == FMAX_) ~^ (!operand_A_ff.sign)) ? operand_A_ff : operand_B_ff;
                 end
               else
                 begin 
                   //If B is a positive infinity and operation is FMAX or if If B is a negative infinity and operation is FMIN
-                  to_round_unit_o = ((operation_ff == FMAX_) ~^ (!operand_B_ff.sign)) ? operand_B_ff : operand_A_ff;
+                  to_round_unit = ((operation_ff == FMAX_) ~^ (!operand_B_ff.sign)) ? operand_B_ff : operand_A_ff;
                 end 
             end
           //Default
           else 
             begin 
-              to_round_unit_o = cmp_result_ff;
+              to_round_unit = cmp_result_ff;
             end     
         end : OUTPUT_LOGIC
-
+  
+  assign to_round_unit_o = to_round_unit;
+                           
 endmodule
