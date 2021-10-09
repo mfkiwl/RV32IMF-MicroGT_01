@@ -32,7 +32,7 @@ module MGT_01_fp_mag_unit
   //Result of the comparison
   float_t cmp_result;
   float_t to_round_unit;
-  
+
   ////////////////////
   // Data registers //
   ////////////////////
@@ -153,19 +153,19 @@ module MGT_01_fp_mag_unit
 
   assign is_infty_A = (&operand_A_ff.exponent) & (~|operand_A_ff.mantissa);
   assign is_infty_B = (&operand_B_ff.exponent) & (~|operand_B_ff.mantissa);
-  
+
       always_comb
         begin : OUTPUT_LOGIC
-          
-          //If result is a signaling NaN
-          invalid_op_o = to_round_unit.sign & (&to_round_unit.exponent) & (|to_round_unit.mantissa);
-          
-          //If it's positive infinity
-          overflow_o = to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa);
-          
-          //If it's negative infinity or denormalized
-          underflow_o = ((~|to_round_unit.exponent) & (|to_round_unit.mantissa)) 
-                        | (to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa));
+
+          //If one of the inputs is signaling NaN
+          invalid_op_o = is_sign_A | is_sign_B;
+
+          //If result is +Infinity
+          overflow_o = !to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa);
+
+          //If result is -Infinity
+          underflow_o = (to_round_unit.sign & (~|to_round_unit.exponent) & (|to_round_unit.mantissa))
+                        | ((~|to_round_unit.exponent) & (|to_round_unit.mantissa));
 
           //If only one is a NaN 
           if (is_nan_A ^ is_nan_B)
@@ -202,7 +202,7 @@ module MGT_01_fp_mag_unit
               to_round_unit = cmp_result_ff;
             end     
         end : OUTPUT_LOGIC
-  
+
   assign to_round_unit_o = to_round_unit;
-                           
+
 endmodule
