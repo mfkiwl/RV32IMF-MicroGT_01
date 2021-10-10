@@ -41,6 +41,7 @@ module MGT_01_fp_mul_unit
   // PREPARE: Preparing the data to be computed (sign extraction, add exponent)
   // MULTIPLY: Multiply the mantissas
   // NORMALIZE: Normalize the result
+  // VALID: The output is valid
 
   ///////////////
   // FSM LOGIC //
@@ -167,7 +168,10 @@ module MGT_01_fp_mul_unit
 
   assign round = |result_mantissa_full[22:0];
 
-  logic [7:0] result_exponent, norm_exponent;
+  //One more bit for underflow detection
+  logic signed [8:0] result_exponent;
+
+  logic [7:0] norm_exponent;
   logic       result_sign;
 
   //We are adding two biased numbers so after the addition we need to subtract the bias
@@ -188,7 +192,7 @@ module MGT_01_fp_mul_unit
             result <= 33'b0;
           if (clk_en_i & (crt_state == PREPARE))
             begin
-              result.exponent <= result_exponent;
+              result.exponent <= result_exponent[7:0];
               result.sign <= result_sign;
             end
           if (clk_en_i & (crt_state == NORMALIZE))
@@ -198,67 +202,90 @@ module MGT_01_fp_mul_unit
             end
         end
 
+  ////////////////////
+  //  Output logic  //
+  ////////////////////
+
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
   
   assign valid_o = (crt_state == VALID);
 
+  logic underflow, overflow;
+
   //Detect if one of the inputs are 0
   logic zero_detect;
+
+  //Mantissa is zero
+  logic op_A_mantissa_zero, op_B_mantissa_zero, res_mantissa_zero;
+
+  assign op_A_mantissa_zero = ~|op_A_out.mantissa;
+  assign op_B_mantissa_zero = ~|op_B_out.mantissa;
+  assign res_mantissa_zero  = ~|result.mantissa;
   
   //AND the two operand (except the sign) and NOR the result to detect the 0
   assign zero_detect = ~|({op_A_out.exponent, op_A_out.mantissa} & {op_B_out.exponent, op_B_out.mantissa});
-  
-      always_comb 
-        begin 
-          casez ({op_A_out, op_B_out})
 
-            {P_INFTY, N_INFTY},
-            {N_INFTY, P_INFTY},
-            {N_INFTY, 32'b?  },
-            {32'b?, N_INFTY  }:   begin 
-                                    to_round_unit_o = N_INFTY;
-                                    overflow_o = 1'b0;
-                                    underflow_o = 1'b1;
-                                    invalid_op_o = 1'b0;
-                                  end
+  logic is_infty_A, is_infty_B;
+  logic is_nan_A, is_nan_B;
 
-            {P_INFTY, P_INFTY},
-            {N_INFTY, N_INFTY},
-            {P_INFTY, 32'b?  },
-            {32'b?, P_INFTY  }:   begin 
-                                    to_round_unit_o = P_INFTY;
-                                    overflow_o = 1'b1;
-                                    underflow_o = 1'b0;
-                                    invalid_op_o = 1'b0;
-                                  end
+  //Is signaling NaN
+  logic is_sign_A, is_sign_B;
 
-            {ZERO, INFINITY}:     begin 
-                                    to_round_unit_o = Q_NAN;
-                                    overflow_o = 1'b0;
-                                    underflow_o = 1'b0;
-                                    invalid_op_o = 1'b1;
-                                  end
+  assign is_infty_A = (&op_A_out.exponent) & op_A_mantissa_zero;
+  assign is_infty_B = (&op_B_out.exponent) & op_B_mantissa_zero;
 
-            {SIGN_NAN, 32'b?},
-            {32'b?, SIGN_NAN}:    begin 
-                                    to_round_unit_o = Q_NAN;
-                                    overflow_o = 1'b0;
-                                    underflow_o = 1'b0;
-                                    invalid_op_o = 1'b1;
-                                  end
+  assign is_nan_A = (&op_A_out.exponent) & !op_A_mantissa_zero;
+  assign is_nan_B = (&op_B_out.exponent) & !op_B_mantissa_zero;
 
-            default:              begin 
-                                    //If an input is 0 put in output +-0
-                                    to_round_unit_o = zero_detect ? {result.sign, 8'b0, 23'b0} : result; 
+  assign is_sign_A = op_A_out.sign & is_nan_A;
+  assign is_sign_B = op_B_out.sign & is_nan_B;
 
-                                    //Exceed max floating point range (overflow on exponent) 
-                                    overflow_o = (op_A_out.exponent[7] & op_B_out.exponent[7]) & (~result.exponent[7]);
 
-                                    //If both the operands have negative exponent and the result's exponent is zero but the mantissa is not zero
-                                    underflow_o = ((~op_A_out.exponent[7]) & (~op_B_out.exponent[7])) & ((~|result.exponent) & (|result.mantissa));
-                                    invalid_op_o = 1'b0;
-                                  end
-          endcase
-        end
+  logic comparison;
+
+
+      always_comb
+        begin : OUTPUT_LOGIC   
+          //Exceed max floating point range (overflow on exponent) or one of the input is an infinity. Sign must be positive
+          overflow = !zero_detect & !result.sign & ((is_infty_A | is_infty_B) | ((op_A_out.exponent[7] & op_B_out.exponent[7]) & (!result.exponent[7])));
+
+          //If both the operands have negative exponent and the result's exponent is zero but the mantissa is not zero
+          //Or if result is negative infinity or if Exceed max floating point range (overflow on exponent) or one of the input is an infinity.
+          //Sign must be negative 
+          underflow = ((!op_A_out.exponent[7] & !op_B_out.exponent[7]) & (result_exponent[8] & !res_mantissa_zero)) |
+                      (result.sign & ((is_infty_A | is_infty_B) | ((op_A_out.exponent[7] & op_B_out.exponent[7]) & !result.exponent[7])));
+
+          //If is 0 x Infinity or one of the two inputs (or both) is a signaling NaN 
+          invalid_op_o = (zero_detect & (is_infty_A | is_infty_B)) | (is_sign_A | is_sign_B);
+
+          if (!zero_detect & (is_infty_A | is_infty_B))
+            begin 
+              to_round_unit_o = {result.sign, {8{1'b1}}, 23'b0};
+            end
+          else if (zero_detect & (is_infty_A | is_infty_B))
+            begin 
+              to_round_unit_o = CANO_NAN;
+            end
+          else if (is_nan_A | is_nan_B)
+            begin 
+              to_round_unit_o = CANO_NAN;
+            end
+          else if (overflow)
+            begin 
+              to_round_unit_o = P_INFTY;
+            end
+          else if (underflow)
+            begin 
+              to_round_unit_o = N_INFTY;
+            end
+          //Default
+          else 
+            begin 
+              to_round_unit_o = zero_detect ? {result.sign, 8'b0, 23'b0} : result;
+            end
+        end : OUTPUT_LOGIC
+
+  assign overflow_o = overflow;
+  assign underflow_o = underflow;
   
 endmodule
