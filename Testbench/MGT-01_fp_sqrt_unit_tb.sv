@@ -19,8 +19,6 @@ module MGT_01_fp_sqrt_unit_tb ();
   logic      invalid_op_o;
   logic      overflow_o;
   logic      underflow_o; 
-  
-  fsm_state_e fsm;
 
 
   MGT_01_fp_sqrt_unit uut (.*);
@@ -66,6 +64,33 @@ module MGT_01_fp_sqrt_unit_tb ();
         radicand_i = 32'hC0000000;  //-2 => Invalid operation
 
         #(T * 29);
+
+        radicand_i = P_INFTY;
+
+        #(T * 29);
+
+        assert ((root_o == P_INFTY) && (overflow_o == 1))
+          $display("TEST: Radicand = POSITIVE INFINITY completed! \n");
+        else 
+          $error("TEST: Radicand = POSITIVE INFINITY failed!");
+
+        radicand_i = N_INFTY;
+
+        #(T * 29);
+
+        assert ((root_o == CANO_NAN) && (invalid_op_o == 1))
+          $display("TEST: Radicand = NEGATIVE INFINITY completed! \n");
+        else 
+          $error("TEST: Radicand = NEGATIVE INFINITY failed!");
+
+        radicand_i = S_NAN;
+
+        #(T * 29);
+
+        assert ((root_o == CANO_NAN) && (invalid_op_o == 1))
+          $display("TEST: Radicand = SIGNALING NAN completed! \n");
+        else 
+          $error("TEST: Radicand = SIGNALING NAN failed!");
         
         $stop;
       end
