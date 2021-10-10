@@ -109,11 +109,13 @@ module MGT_01_fp_sqrt_unit
             root_out <= 32'b0;
           else if (clk_en_i & (crt_state == SQRT))
             begin 
-              root_out.sign <= radicand_out.sign;
               root_out.exponent <= root_exponent + BIAS;
               root_out.mantissa <= mantissa_sqrt;
             end
         end : OUTPUT_REGISTER
+
+  //Root is always positive
+  assign root_out.sign = 1'b0;
 
   /////////////////////
   // Algorithm logic //
@@ -167,43 +169,48 @@ module MGT_01_fp_sqrt_unit
   //  Output logic  //
   ////////////////////
 
+  logic is_negative;
+  logic is_nan;
+  logic is_infty;
+
+  //Mantissa is zero
+  logic mantissa_zero;
+
+  assign mantissa_zero = ~|radicand_out.mantissa;
+
+  assign is_negative = radicand_out.sign;
+
+  assign is_nan = (&radicand_out.exponent) & !mantissa_zero;
+
+  assign is_infty = (&radicand_out.exponent) & mantissa_zero;
+
       always_comb
-        begin 
-          casez ({radicand_out.sign, radicand_out.exponent, radicand_out.mantissa})
-            
-            INFINITY:       begin 
-                              root_o = (radicand_out.sign) ? Q_NAN : P_INFTY;
-                              overflow_o = ~radicand_out.sign;
-                              underflow_o = 1'b0;
-                              invalid_op_o = radicand_out.sign;
-                            end
+        begin : OUTPUT_LOGIC
 
-            SIGN_NAN:       begin 
-                              root_o = Q_NAN;
-                              overflow_o = 1'b0;
-                              underflow_o = 1'b0;
-                              invalid_op_o = 1'b1;
-                            end
+          invalid_op_o = is_negative;
 
-            default:        begin 
-                              //If the sign is negative then it is an invalid operation and
-                              //it has to produce a quiet NaN
-                              root_o = radicand_out.sign ? Q_NAN : root_out;
+          //If the result is not infinity then the square root never 
+          //overflow since we are dividing the exponent by 2
+          overflow_o = is_infty & (!is_negative);
 
-                              //If the result is not infinity then the square root never 
-                              //overflow since we are dividing the exponent by 2 
-                              overflow_o = 1'b0;
+          //Since we are dividing the exponent by two if we take a very
+          //small number (x * 10^-70) square rooting this number will 
+          //generate a bigger number
+          underflow_o = 1'b0;
 
-                              //Since we are dividing the exponent by two if we take a very
-                              //small number (x * 10^-70) square rooting this number will 
-                              //generate a bigger number
-                              underflow_o = 1'b0;
-
-                              //If the sign is negative then it is an invalid operation
-                              invalid_op_o = radicand_out.sign;
-                            end
-          endcase
-        end
+          if (is_infty)
+            begin 
+              root_o = (radicand_out.sign) ? CANO_NAN : P_INFTY;
+            end
+          else if (is_nan | is_negative)
+            begin 
+              root_o = CANO_NAN;
+            end
+          else 
+            begin 
+              root_o = root_out;
+            end
+        end : OUTPUT_LOGIC
 
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
 
