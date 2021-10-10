@@ -138,21 +138,31 @@ module MGT_01_fp_mag_unit
 
   logic [31:0] not_a_nan;
 
+  //Mantissa is zero
+  logic op_A_mantissa_zero, op_B_mantissa_zero;
+
+  assign op_A_mantissa_zero = ~|operand_A_ff.mantissa;
+  assign op_B_mantissa_zero = ~|operand_B_ff.mantissa;
+
   //Select the operand 
   assign not_a_nan = is_nan_A ? operand_B_ff : operand_A_ff;
 
   //Check 
-  assign is_nan_A = (&operand_A_ff.exponent) & (|operand_A_ff.mantissa);
-  assign is_nan_B = (&operand_B_ff.exponent) & (|operand_B_ff.mantissa);
-
+  assign is_nan_A = (&operand_A_ff.exponent) & !op_A_mantissa_zero;
+  assign is_nan_B = (&operand_B_ff.exponent) & !op_B_mantissa_zero;
   assign is_sign_A = operand_A_ff.sign & is_nan_A;
   assign is_sign_B = operand_B_ff.sign & is_nan_B;
 
   //Infinity logic check
   logic is_infty_A, is_infty_B;
 
-  assign is_infty_A = (&operand_A_ff.exponent) & (~|operand_A_ff.mantissa);
-  assign is_infty_B = (&operand_B_ff.exponent) & (~|operand_B_ff.mantissa);
+  assign is_infty_A = (&operand_A_ff.exponent) & op_A_mantissa_zero;
+  assign is_infty_B = (&operand_B_ff.exponent) & op_A_mantissa_zero;
+
+  //Result mantissa is zero
+  logic res_mantissa_zero;
+
+  assign res_mantissa_zero = ~|to_round_unit.mantissa;
 
       always_comb
         begin : OUTPUT_LOGIC
@@ -161,11 +171,11 @@ module MGT_01_fp_mag_unit
           invalid_op_o = is_sign_A | is_sign_B;
 
           //If result is +Infinity
-          overflow_o = !to_round_unit.sign & (&to_round_unit.exponent) & (~|to_round_unit.mantissa);
+          overflow_o = !to_round_unit.sign & (&to_round_unit.exponent) & res_mantissa_zero;
 
           //If result is -Infinity
-          underflow_o = (to_round_unit.sign & (~|to_round_unit.exponent) & (|to_round_unit.mantissa))
-                        | ((~|to_round_unit.exponent) & (|to_round_unit.mantissa));
+          underflow_o = (to_round_unit.sign & (~|to_round_unit.exponent) & !res_mantissa_zero)
+                        | ((~|to_round_unit.exponent) & !res_mantissa_zero);
 
           //If only one is a NaN 
           if (is_nan_A ^ is_nan_B)
