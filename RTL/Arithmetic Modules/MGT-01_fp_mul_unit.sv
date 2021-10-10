@@ -25,7 +25,7 @@ module MGT_01_fp_mul_unit
   input  logic      rst_n_i,                       //Reset active low
 
   //Outputs
-  output float_t    to_round_unit_o,   //Result 
+  output float_t    to_round_unit_o,               //Result 
   output logic      valid_o,
   output fu_state_e fu_state_o,
   output logic      overflow_o, 
