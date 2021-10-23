@@ -6,8 +6,7 @@
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    This module contains the hardware necessary to perform a   //
-//                 addition / subtraction on floating point data. It produces //
-//                 a valid result in 4 clock cycles.                          //
+//                 addition / subtraction on floating point data.             //
 ////////////////////////////////////////////////////////////////////////////////
 
 `include "Modules_pkg.svh"
@@ -20,21 +19,19 @@ module MGT_01_fp_add_unit
   input  logic            rst_n_i,            //Reset active low
   input  logic            clk_i, clk_en_i,    //Clock signals
 
-  input  fsum_ops         operation_i,
-  input  rounding_e       round_i, 
+  input  fsum_ops         operation_i, 
 
   //Outputs
   output float_t          to_round_unit_o,    
-  output fu_state_e       fu_state_o,         //Functional unit state
-  output rounding_e       round_o, 
+  output fu_state_e       fu_state_o,         //Functional unit state 
   output logic            valid_o,
 
   output logic            underflow_o,
   output logic            overflow_o,
-  output logic            invalid_op_o 
+  output logic            invalid_op_o
 );
 
-  typedef enum logic [1:0] {IDLE, PREPARE, ADDITION, NORMALIZE} fsm_state_e;
+  typedef enum logic [2:0] {IDLE, PREPARE, ADDITION, NORMALIZE, VALID} fsm_state_e;
 
   fsm_state_e crt_state, nxt_state;
 
@@ -77,20 +74,16 @@ module MGT_01_fp_add_unit
 
             ADDITION:   nxt_state = NORMALIZE; 
 
-            NORMALIZE:  nxt_state = IDLE;
+            NORMALIZE:  nxt_state = VALID;
+
+            VALID:      nxt_state = IDLE;
+
+            default:    nxt_state = IDLE;
 
           endcase
         end
 
-typedef struct packed {     
-      logic        sign;
-      logic [7:0]  exponent;
-      logic        hidden_bit;
-      logic [22:0] mantissa;
-      logic [23:0] shifted;   //Shifted bits of mantissa
-  } effective_float_t;
-
-  effective_float_t op_A, op_B;
+  effective_float_t op_A, op_A_o, op_B, op_B_o;
 
   logic hidden_a, hidden_b;
 
@@ -99,100 +92,92 @@ typedef struct packed {
   assign hidden_b = |op_B_i.exponent;   
 
   //Initialize the data with effective mantissa 
-  assign op_A = '{op_A_i.sign, op_A_i.exponent, hidden_a, op_A_i.mantissa, 24'b0};
+  assign op_A = {op_A_i.sign, op_A_i.exponent, hidden_a, op_A_i.mantissa};
 
   //The sign bit of the second operand is inverted if the operation is a subtraction
-  assign op_B = (operation_i == FADD_) ? '{op_B_i.sign, op_B_i.exponent, hidden_b, op_B_i.mantissa, 24'b0} :
-                                         '{~op_B_i.sign, op_B_i.exponent, hidden_b, op_B_i.mantissa, 24'b0};
+  assign op_B = (operation_i == FADD_) ? {op_B_i.sign, op_B_i.exponent, hidden_b, op_B_i.mantissa} :
+                                         {!op_B_i.sign, op_B_i.exponent, hidden_b, op_B_i.mantissa};
 
-  //Register input/output
-  effective_float_t op_A_in, op_A_out, op_B_in, op_B_out;
-  logic [23:0] shifted_mantissa, shifted_mantissa_out;
+  typedef struct packed {
+      logic hidden_bit;
+      logic [22:0] mantissa;
+  } hb_mantissa_t;
+
+  //Register input/output values 
+  hb_mantissa_t op_A_in, op_A_out, op_B_in, op_B_out;
   logic [7:0]  exponent_diff;     //Obtained by subtracting the two exponents
 
-  logic [23:0] shifted_out; 
-    
-      always_comb 
-        begin
-          unique case (crt_state)
+  ////////////////////  
+  // Data registers //
+  ////////////////////
 
-            IDLE:       begin
-                          op_A_in = op_A;
-                          op_B_in = op_B;
-                        end
-
-            PREPARE:    begin             //The two numbers have the same exponent
-                          op_A_in = (exponent_diff[7]) ? {op_A_out.sign, op_B_out.exponent, shifted_mantissa, shifted_out} : op_A_out;
-                          op_B_in = (exponent_diff[7]) ? op_B_out : {op_B_out.sign, op_A_out.exponent, shifted_mantissa, shifted_out};
-                        end
-
-            ADDITION:   begin             //Dont'care, we won't use these values anymore
-                          op_A_in = op_A;
-                          op_B_in = op_B;
-                        end
-
-            NORMALIZE:  begin             //Dont'care, we won't use these values anymore
-                          op_A_in = op_A;
-                          op_B_in = op_B;
-                        end
-
-          endcase
-        end
-
-      //Data register
+      //Store operand A's value used for computation
+      always_ff @(posedge clk_i) 
+        begin : INIT_REG_A
+        if (!rst_n_i)
+            op_A_o <= 33'b0;      //Reset, in float +0
+          if (clk_en_i & crt_state == IDLE)
+            op_A_o <= op_A;
+        end : INIT_REG_A
 
       always_ff @(posedge clk_i)
         begin : REG_A
           if (!rst_n_i)
-            op_A_out <= 33'b0;      //Reset, in float +0
-          if (clk_en_i) 
-            op_A_out <= op_A_in;   
+            op_A_out <= 33'b0;      //Reset, in float +0 
+          else if (clk_en_i & crt_state == PREPARE) 
+            op_A_out <= op_A_in; 
         end : REG_A
 
+      //Store operand B's initial value
+      always_ff @(posedge clk_i) 
+        begin : INIT_REG_B
+          if (!rst_n_i)
+            op_B_o <= 33'b0;      //Reset, in float +0
+          if (clk_en_i & crt_state == IDLE)
+            op_B_o <= op_B;
+        end : INIT_REG_B
+
+      //Store operand B's value used for computation
       always_ff @(posedge clk_i)
         begin : REG_B
           if (!rst_n_i)
             op_B_out <= 33'b0;      //Reset, in float +0 
-          if (clk_en_i)
-            op_B_out <= op_B_in;               
-        end : REG_B
-   
+          else if (clk_en_i & crt_state == PREPARE) 
+            op_B_out <= op_B_in;                     
+        end : REG_B 
     
   float_t result;
 
-  logic [7:0]  exponent_diff_abs; //Absolute value
+  logic [7:0]  exponent_diff_abs;   //Absolute value
 
-  logic [7:0]  result_exponent;   //Exponent used for the final result
-  logic [7:0]  norm_exponent;     //Normalized exponent
+  logic [7:0]  result_exponent;     //Exponent used for the final result
+  logic [7:0]  norm_exponent;       //Normalized exponent
 
-  logic [48:0] result_mantissa;   //result_mantissa[48] is the carry bit
-  logic [48:0] result_mantissa_out;   
-  logic [47:0] result_mantissa_abs;
-  logic [47:0] norm_mantissa;     //Normalized mantissa
+  logic [24:0] result_mantissa;     //[24] is the carry bit
+  logic [24:0] result_mantissa_out;   
+  logic [23:0] result_mantissa_abs;
+  logic [23:0] norm_mantissa;       //Normalized mantissa
     
-  logic        result_sign;       //Sign used for the result
+  logic        result_sign;         //Sign used for the result
 
-  logic [23:0] mantissa_diff;     //Used to find the result's sign bit 
+  logic [23:0] mantissa_diff;       //Used to find the result's sign bit 
 
   logic [4:0]  leading_zero;        //Number of consecutive 0s 
-  
+  logic        result_is_zero;
     
       always_ff @(posedge clk_i)
         begin : RESULT_REG
           if (!rst_n_dly)
-            result <= 32'b0;    //Reset, in float +0 
-          if (clk_en_i)
-            begin 
-              if (crt_state == PREPARE)         //The result's sign and exponent is calculated
-                begin                           //in the PREPARE stage
-                  result.sign <= result_sign;
-                  result.exponent <= result_exponent;
-                end
-              else if (crt_state == NORMALIZE)  //Normalized exponent and mantissa are calculated
-                begin                           //in NORMALIZE stage
-                  result.exponent <= norm_exponent;
-                  result.mantissa <= norm_mantissa[46:24];
-                end
+            result <= 32'b0;  //Reset, in float +0 
+          if (clk_en_i & crt_state == PREPARE)  //The result's sign and exponent is calculated
+            begin                               //in the PREPARE stage
+              result.sign <= result_sign;
+              result.exponent <= result_exponent;
+            end
+          else if (clk_en_i & crt_state == NORMALIZE)  //Normalized exponent and mantissa are calculated
+            begin                                      //in NORMALIZE stage
+              result.exponent <= result_is_zero ? 8'b0 : norm_exponent;
+              result.mantissa <= norm_mantissa[22:0];
             end         
         end : RESULT_REG
         
@@ -206,195 +191,190 @@ typedef struct packed {
   // Algorithm logic //
   /////////////////////
 
-  assign mantissa_diff = op_A.mantissa - op_B.mantissa;   
-  assign exponent_diff = op_A_out.exponent - op_B_out.exponent;
+  //If two numbers are equals
+  logic equals;
 
-      always_comb 
-        begin
-          if (crt_state == IDLE)
+  assign mantissa_diff = op_A_o.mantissa - op_B_o.mantissa;   
+  assign exponent_diff = op_A_o.exponent - op_B_o.exponent;
+
+  //If mantissa diff and exponent diff are zero
+  assign equals = (~|mantissa_diff) & (~|exponent_diff);  
+
+  //If A and B absolute values are equals but have different sign
+  assign result_is_zero = equals & (op_A_o.sign ^ op_B_o.sign);
+
+      always_comb
+        begin : PREPARE_LOGIC                        
+          if (exponent_diff[7])
+            begin  
+              exponent_diff_abs = -exponent_diff;   //If the difference is negative it means B > A
+              result_exponent = op_B_o.exponent;    //Use the B exponent for the result
+                  
+              op_B_in = {op_B_o.hidden_bit, op_B_o.mantissa};
+              op_A_in = {op_A_o.hidden_bit, op_A_o.mantissa} >> exponent_diff_abs;    //Shift by the difference
+                  
+              result_sign = op_B_o.sign;
+            end 
+          else
             begin
-              //Values used to not interfere a latch
-              norm_mantissa = 0;
-              norm_exponent = 0;
-              result_exponent = 0;
-              shifted_mantissa = 0;
-              result_sign = 0;
-              result_mantissa = 0;
-              shifted_out = 0;
-            end
-          else if (crt_state == PREPARE)
-            begin
-              //Values used to not interfere a latch  
-              norm_mantissa = 0;
-              norm_exponent = 0;
-              result_mantissa = 0;
-                         
-              if (exponent_diff[7] == 1)
-                begin  
-                  exponent_diff_abs = -exponent_diff;   //If the difference is negative it means B > A
-                  result_exponent = op_B_out.exponent;  //Use the B exponent for the result
-
-                  {shifted_mantissa, shifted_out} = {op_A_out.hidden_bit, op_A_out.mantissa} >> exponent_diff_abs;    //Shift by the difference
-                  result_sign = op_B_out.sign;
-                end 
-              else
-                begin
-                  exponent_diff_abs = exponent_diff;    //If the difference is positive it means A > B or A = B
-                  result_exponent = op_A_out.exponent;  //Use the A exponent for the result
-
-                  {shifted_mantissa, shifted_out} = {op_B_out.hidden_bit, op_B_out.mantissa} >> exponent_diff_abs;    //Shift by the difference
+              exponent_diff_abs = exponent_diff;    //If the difference is positive it means A > B or A = B
+              result_exponent = op_A_o.exponent;    //Use the A exponent for the result
+                  
+              op_A_in = {op_A_o.hidden_bit, op_A_o.mantissa};
+              op_B_in = {op_B_o.hidden_bit, op_B_o.mantissa} >> exponent_diff_abs;    //Shift by the difference
                                     
-                  //If the difference is equal to zero select the sign based on the mantissa_diff sign bit
-                  result_sign = (|exponent_diff_abs) ? op_A_out.sign : ((mantissa_diff[23]) ? op_B_out.sign : op_A_out.sign);
+              //If the difference is equal to zero select the sign based on the mantissa_diff sign bit
+              result_sign = (|exponent_diff_abs) ? op_A_o.sign : ((mantissa_diff[23]) ? op_B_o.sign : op_A_o.sign);
+            end
+        end : PREPARE_LOGIC
+
+      always_comb
+        begin : ADDITION_LOGIC
+          case ({op_A_o.sign, op_B_o.sign})   
+
+            2'b00:   result_mantissa =  op_A_out + op_B_out; 
+
+            2'b01:   result_mantissa =  op_A_out - op_B_out; 
+
+            2'b10:   result_mantissa = -op_A_out + op_B_out;
+                  
+            2'b11:   result_mantissa =  op_A_out + op_B_out;
+
+          endcase
+        end : ADDITION_LOGIC
+
+      always_comb
+        begin : NORMALIZE_LOGIC
+          if (op_A_o.sign ~^ op_B_o.sign)       //XNOR: basically if the sign bit of the operands are the same (is an addition)
+            begin
+              if (result_mantissa_out[24])  //There is a carry bit
+                begin
+                  norm_mantissa = result_mantissa_out >> 1;
+                  norm_exponent = result.exponent + 1;
+                end
+              else                          //There is NOT a carry bit
+                begin
+                  norm_mantissa = result_mantissa_out;
+                  norm_exponent = result.exponent;
                 end
             end
-          else if (crt_state == ADDITION)
+          else    //If the operation is a subtraction
             begin
-              //Values used to not interfere a latch
-              norm_mantissa = 0;
-              norm_exponent = 0;
-              result_exponent = 0;
-              shifted_mantissa = 0;
-              result_sign = 0;
-              shifted_out = 0;
-              
-              unique case ({op_A_out.sign, op_B_out.sign})   
+              //Compute the absolute value
+              if (result_mantissa_out[24])
+                result_mantissa_abs = -result_mantissa_out[23:0];
+              else 
+                result_mantissa_abs = result_mantissa_out[23:0];
 
-                2'b00:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa, op_A_out.shifted} + {op_B_out.hidden_bit, op_B_out.mantissa, op_B_out.shifted}; 
+              casez (result_mantissa_abs)    //Leading zero encoder
 
-                2'b01:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa, op_A_out.shifted} - {op_B_out.hidden_bit, op_B_out.mantissa, op_B_out.shifted}; 
-
-                2'b10:   result_mantissa = -{op_A_out.hidden_bit, op_A_out.mantissa, op_A_out.shifted} + {op_B_out.hidden_bit, op_B_out.mantissa, op_B_out.shifted};
-                  
-                2'b11:   result_mantissa = {op_A_out.hidden_bit, op_A_out.mantissa, op_A_out.shifted} + {op_B_out.hidden_bit, op_B_out.mantissa, op_B_out.shifted};
+                24'b1???????????????????????:  leading_zero = 5'd0;
+                24'b01??????????????????????:  leading_zero = 5'd1;
+                24'b001?????????????????????:  leading_zero = 5'd2;
+                24'b0001????????????????????:  leading_zero = 5'd3;
+                24'b00001???????????????????:  leading_zero = 5'd4;
+                24'b000001??????????????????:  leading_zero = 5'd5;
+                24'b0000001?????????????????:  leading_zero = 5'd6;
+                24'b00000001????????????????:  leading_zero = 5'd7;
+                24'b000000001???????????????:  leading_zero = 5'd8;
+                24'b0000000001??????????????:  leading_zero = 5'd9;
+                24'b00000000001?????????????:  leading_zero = 5'd10;
+                24'b000000000001????????????:  leading_zero = 5'd11;
+                24'b0000000000001???????????:  leading_zero = 5'd12;
+                24'b00000000000001??????????:  leading_zero = 5'd13;
+                24'b000000000000001?????????:  leading_zero = 5'd14;
+                24'b0000000000000001????????:  leading_zero = 5'd15;
+                24'b00000000000000001???????:  leading_zero = 5'd16;
+                24'b000000000000000001??????:  leading_zero = 5'd17;
+                24'b0000000000000000001?????:  leading_zero = 5'd18;
+                24'b00000000000000000001????:  leading_zero = 5'd19;
+                24'b000000000000000000001???:  leading_zero = 5'd20;
+                24'b0000000000000000000001??:  leading_zero = 5'd21;
+                24'b00000000000000000000001?:  leading_zero = 5'd22;
+                24'b000000000000000000000001:  leading_zero = 5'd23;
+                24'b000000000000000000000000:  leading_zero = 5'd24;
 
               endcase
-            end
-          else 
-            begin
-              //Values used to not interfere a latch
-              result_exponent = 0;
-              shifted_mantissa = 0;
-              result_sign = 0;
-              result_mantissa = result_mantissa_out;
-              shifted_out = 0;
-
-              if (op_A.sign ~^ op_B.sign)       //XNOR: basically if the sign bit of the operands are the same (is an addition)
-                begin
-                  if (result_mantissa_out[48])  //There is a carry bit
-                    begin
-                      norm_mantissa = result_mantissa_out >> 1;
-                      norm_exponent = result.exponent + 1;
-                    end
-                  else                          //There is NOT a carry bit
-                    begin
-                      norm_mantissa = result_mantissa_out;
-                      norm_exponent = result.exponent;
-                    end
-                end
-              else    //If the operation is a subtraction
-                begin
-                  //Compute the absolute value
-                  if (result_mantissa_out[48])
-                    result_mantissa_abs = -result_mantissa_out[47:0];
-                  else 
-                    result_mantissa_abs = result_mantissa_out[47:0];
-
-                  unique casez (result_mantissa_abs[47:24])    //Leading zero encoder
-
-                    24'b1???????????????????????:  leading_zero = 5'd0;
-                    24'b01??????????????????????:  leading_zero = 5'd1;
-                    24'b001?????????????????????:  leading_zero = 5'd2;
-                    24'b0001????????????????????:  leading_zero = 5'd3;
-                    24'b00001???????????????????:  leading_zero = 5'd4;
-                    24'b000001??????????????????:  leading_zero = 5'd5;
-                    24'b0000001?????????????????:  leading_zero = 5'd6;
-                    24'b00000001????????????????:  leading_zero = 5'd7;
-                    24'b000000001???????????????:  leading_zero = 5'd8;
-                    24'b0000000001??????????????:  leading_zero = 5'd9;
-                    24'b00000000001?????????????:  leading_zero = 5'd10;
-                    24'b000000000001????????????:  leading_zero = 5'd11;
-                    24'b0000000000001???????????:  leading_zero = 5'd12;
-                    24'b00000000000001??????????:  leading_zero = 5'd13;
-                    24'b000000000000001?????????:  leading_zero = 5'd14;
-                    24'b0000000000000001????????:  leading_zero = 5'd15;
-                    24'b00000000000000001???????:  leading_zero = 5'd16;
-                    24'b000000000000000001??????:  leading_zero = 5'd17;
-                    24'b0000000000000000001?????:  leading_zero = 5'd18;
-                    24'b00000000000000000001????:  leading_zero = 5'd19;
-                    24'b000000000000000000001???:  leading_zero = 5'd20;
-                    24'b0000000000000000000001??:  leading_zero = 5'd21;
-                    24'b00000000000000000000001?:  leading_zero = 5'd22;
-                    24'b000000000000000000000001:  leading_zero = 5'd23;
-                    24'b000000000000000000000000:  leading_zero = 5'd24;
-
-                  endcase
                   
-                  norm_mantissa = result_mantissa_abs << leading_zero;
-                  norm_exponent = result.exponent - leading_zero;
-                end
-            end 
-        end
+              norm_mantissa = result_mantissa_abs << leading_zero;
+              norm_exponent = result.exponent - leading_zero;
+            end
+        end : NORMALIZE_LOGIC
 
   //////////////////
   // Output logic //
   //////////////////
 
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
-
-  assign round_o = round_i;
  
-  assign valid_o = (crt_state == IDLE) & clk_en_i;
-  
-      always_comb     //Output selection 
-        begin 
-         casez ({{op_A_out.sign, op_A_out.exponent, op_A_out.mantissa}, {op_B_out.sign, op_B_out.exponent, op_B_out.mantissa}})
+  assign valid_o = (crt_state == VALID) & clk_en_i;
 
-            {P_INFTY, 32'b?},
-            {32'b?, P_INFTY}:  begin
-                                  to_round_unit_o = P_INFTY;
-                                  overflow_o  = 1'b1;
-                                  underflow_o = 1'b0;
-                                  invalid_op_o = 1'b0;
-                                end
+  //Mantissa is zero
+  logic op_A_mantissa_zero, op_B_mantissa_zero;
 
-            {N_INFTY, 32'b?},
-            {32'b?, N_INFTY}:   begin
-                                  to_round_unit_o = N_INFTY;
-                                  overflow_o  = 1'b0;
-                                  underflow_o = 1'b1;
-                                  invalid_op_o = 1'b0;
-                                end
+  assign op_A_mantissa_zero = ~|op_A_o.mantissa;
+  assign op_B_mantissa_zero = ~|op_B_o.mantissa; 
 
-            {P_INFTY, N_INFTY},
-            {N_INFTY, P_INFTY}: begin
-                                  to_round_unit_o = (op_A_out.sign ^ op_B_out.sign) ? QUIET_NAN : (op_A_out.sign & op_B_out.sign) ? N_INFTY : P_INFTY;
-                                  overflow_o  = 1'b0;
-                                  underflow_o = 1'b0;
-                                  invalid_op_o = 1'b1;
-                                end
+  logic is_Pinfty_A, is_Pinfty_B, is_Ninfty_A, is_Ninfty_B;
+  logic is_nan_A, is_nan_B;
 
-            {SIGN_NAN, 32'b?},
-            {32'b?, SIGN_NAN}:  begin
-                                  to_round_unit_o = QUIET_NAN;
-                                  overflow_o  = 1'b0;
-                                  underflow_o = 1'b0;
-                                  invalid_op_o = 1'b1;
-                                end
+  //Is signaling NaN
+  logic is_sign_A, is_sign_B;
 
-            default:            begin
-                                  to_round_unit_o = result;
-                                  
-                                  //Exceed max floating point range (overflow on exponent) 
-                                  overflow_o = (op_A_out.exponent[7] & op_B_out.exponent[7]) & (~result.exponent[7]);
+  assign is_Pinfty_A = !op_A_o.sign & (&op_A_o.exponent) & op_A_mantissa_zero;
+  assign is_Pinfty_B = !op_B_o.sign & (&op_B_o.exponent) & op_B_mantissa_zero;
 
-                                  //If the result is zero while the operand are different or when exponent is zero 
-                                  //but mantissa is not zero
-                                  underflow_o = ((op_A_out != op_B_out) & (~|{result.exponent, result.mantissa})) | ((~|result.exponent) & (|result.mantissa));
-                                  invalid_op_o = ((result == QUIET_NAN) | (result == SIGN_NAN));
-                                end
+  assign is_Ninfty_A = op_A_o.sign & (&op_A_o.exponent) & op_A_mantissa_zero;
+  assign is_Ninfty_B = op_B_o.sign & (&op_B_o.exponent) & op_B_mantissa_zero;
 
-          endcase
-        end
+  assign is_nan_A = (&op_A_o.exponent) & !op_A_mantissa_zero;
+  assign is_nan_B = (&op_B_o.exponent) & !op_B_mantissa_zero;
+
+  assign is_sign_A = op_A_o.sign & is_nan_A;
+  assign is_sign_B = op_B_o.sign & is_nan_B;
+
+  logic overflow;
+
+  //Exponent overflow range
+  logic exp_ov_rng;
+
+  //If the exponent is 0xFF
+  assign exp_ov_rng = &result.exponent;
+      
+      always_comb
+        begin : OUTPUT_LOGIC
+          //Exceed max floating point range (overflow on exponent) or one of two the inputs is +Infinity 
+          overflow = exp_ov_rng | (is_Pinfty_A | is_Pinfty_B);
+
+          //If one of the two inputs is -Infinity or denormals
+          underflow_o = (is_Ninfty_A | is_Ninfty_B) | (~|op_A_o.exponent & |op_A_o.mantissa) | (~|op_B_o.exponent & |op_B_o.mantissa);
+
+          //If it's +Infinity -Infinity or -Infinity +Infinity or one of the two inputs is a signaling NaN
+          invalid_op_o = (is_Pinfty_A & is_Ninfty_B) | (is_Ninfty_A & is_Pinfty_B) | (is_sign_A | is_sign_B);
+
+          if ((is_Ninfty_A | is_Ninfty_B) & (!is_Pinfty_A & !is_Pinfty_B))
+            begin 
+              to_round_unit_o = N_INFTY;
+            end
+          else if ((is_Pinfty_A & is_Ninfty_B) | (is_Ninfty_A & is_Pinfty_B))
+            begin 
+              to_round_unit_o = CANO_NAN;
+            end
+          else if (is_nan_A | is_nan_B)
+            begin 
+              to_round_unit_o = CANO_NAN;
+            end
+          else if (overflow)
+            begin 
+              to_round_unit_o = P_INFTY;
+            end
+          //Default
+          else 
+            begin 
+              to_round_unit_o = result;
+            end
+        end : OUTPUT_LOGIC
+
+  assign overflow_o = overflow;
 
 endmodule 
