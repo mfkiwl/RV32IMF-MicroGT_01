@@ -6,6 +6,7 @@
 // Language:       SystemVerilog                                              //
 //                                                                            //
 // Description:    This unit perform a simple floating point division.        //
+//                 Doesn't support denormals number at the moment.            //
 //                                                                            //
 // Dependencies:   MGT-01_nr_divider.sv                                       //
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,6 +39,7 @@ module MGT_01_fp_div_unit
   // PREPARE: Preparing the data to be computed (sign extraction, add exponent)
   // DIVIDE: Divide the mantissas
   // NORMALIZE: Normalize the result
+  // VALID: The output is valid
 
   ///////////////
   // FSM LOGIC //
@@ -68,7 +70,7 @@ module MGT_01_fp_div_unit
       //Next state logic
       always_comb 
         begin
-          unique case (crt_state)
+          case (crt_state)
 
             IDLE:       nxt_state = (~rst_n_dly) ? IDLE : PREPARE;
 
@@ -150,7 +152,7 @@ module MGT_01_fp_div_unit
   
   assign fu_state_o = (crt_state == IDLE) ? FREE : BUSY;
 
-  logic [7:0] result_exponent, norm_exponent;
+  logic [8:0] result_exponent, norm_exponent;
   logic       result_sign;
   logic [4:0] leading_zero;
 
@@ -162,7 +164,7 @@ module MGT_01_fp_div_unit
 
       always_comb
         begin : NORMALIZE_LOGIC
-          unique casez (result_mantissa)    //Leading zero encoder
+          casez (result_mantissa)    //Leading zero encoder
 
             25'b1????????????????????????:  leading_zero = 5'd0;
             25'b01???????????????????????:  leading_zero = 5'd1;
@@ -194,7 +196,7 @@ module MGT_01_fp_div_unit
           endcase
                   
           norm_mantissa = result_mantissa << leading_zero;
-          norm_exponent = result.exponent - leading_zero; 
+          norm_exponent[7:0] = result.exponent[7:0] - leading_zero; 
 
         end : NORMALIZE_LOGIC
 
@@ -212,67 +214,75 @@ module MGT_01_fp_div_unit
                 end
               else if (crt_state == NORMALIZE)
                 begin 
-                  result.exponent <= norm_exponent;
+                  result.exponent <= norm_exponent[7:0];
                   result.mantissa <= norm_mantissa[23:1];
                 end
             end
         end
 
-  logic zero_divide;
+  logic zero_divide, dividend_zero;
+  logic overflow, underflow;
+
+  assign dividend_zero = (~|dividend_out.exponent) & (~|dividend_out.mantissa); 
 
   assign zero_divide = zero_divide_mantissa & (~|divisor_out.exponent);
   assign zero_divide_o = zero_divide;
+  
+  //Input is an infinity or a generic NaN
+  logic is_infty_A, is_infty_B;
+  logic is_nan_A, is_nan_B;
+
+  //Input is a signaling NaN
+  logic is_sign_A, is_sign_B;
+
+  assign is_infty_A = (&dividend_out.exponent) & (~|dividend_out.mantissa);
+  assign is_infty_B = (&divisor_out.exponent) & (~|divisor_out.mantissa);
+
+  assign is_nan_A = (&dividend_out.exponent) & (|dividend_out.mantissa);
+  assign is_nan_B = (&divisor_out.exponent) & (|divisor_out.mantissa);
+
+  assign is_sign_A = dividend_out.sign & is_nan_A;
+  assign is_sign_B = divisor_out.sign & is_nan_B;
+
+  logic invalid_op;
+
+  //If both inputs are zeros, infinities or one is a signaling NaN 
+  assign invalid_op = (((~|dividend_out.exponent) & (~|dividend_out.mantissa)) & zero_divide) | (is_infty_A & is_infty_B)
+                      | (is_sign_A | is_sign_B);
 
       always_comb
-        begin     //Don't consider the hidden bit
-          casez ({{dividend_out.sign, dividend_out.exponent, dividend_out.mantissa}, {divisor_out.sign, divisor_out.exponent, divisor_out.mantissa}})
+        begin : OUTPUT_LOGIC         
+          //If the dividend's exponent is positive and the divisor one's is negative (Ex: +2*10^9 / 2*10^-5 = 2*10^14)
+          //and if the result's exponent is negative that means we have an overflow
+          overflow = ((dividend_out.exponent[7] & (~divisor_out.exponent[7])) & (~result.exponent[7])) | is_infty_A;
 
-            {ZERO, ZERO},
-            {INFINITY, INFINITY}:   begin 
-                                      to_round_unit_o = Q_NAN;
-                                      overflow_o = 1'b0;
-                                      underflow_o = 1'b0;
-                                      invalid_op_o = 1'b1;
-                                    end
+          //If the divisor's exponent is positive and the dividend's exponent is negative
+          //and if the exponent of the result has all bits cleared and the mantissa's bits are not we have an underflow
+          underflow = result_exponent[8] & (divisor_out.exponent[7] & (~dividend_out.exponent[7]));
 
-            {32'b?, P_INFTY}:       begin 
-                                      to_round_unit_o = (dividend_out.sign) ? N_ZERO : P_ZERO;
-                                      overflow_o = 1'b0;
-                                      underflow_o = 1'b1;
-                                      invalid_op_o = 1'b0;
-                                    end
+          invalid_op_o = invalid_op;
 
-            {32'b?, N_INFTY}:       begin 
-                                      to_round_unit_o = (dividend_out.sign) ? P_ZERO : N_ZERO;
-                                      overflow_o = 1'b0;
-                                      underflow_o = 1'b1;
-                                      invalid_op_o = 1'b0;
-                                    end
-
-            {SIGN_NAN, 32'b?},
-            {32'b?, SIGN_NAN}:    begin 
-                                      to_round_unit_o = Q_NAN;
-                                      overflow_o = 1'b0;
-                                      underflow_o = 1'b0;
-                                      invalid_op_o = 1'b1;
-                                  end
-
-            default:              begin 
-                                    //Exclude the sign bit
-                                    to_round_unit_o = (zero_divide) ? {result_sign, 31'h7F800000} : result;
-
-                                    //If the dividend's exponent is positive and the divisor one's is negative (Ex: +2*10^9 / 2*10^-5 = 2*10^14)
-                                    // AND
-                                    //If the result's exponent is negative that means we have an overflow
-                                    overflow_o = (dividend_out.exponent[7] & (~divisor_out.exponent[7])) & (~result.exponent[7]);
-
-                                    //If the divisor's exponent is positive and the dividend's exponent is negative
-                                    // AND
-                                    //If the exponent of the result has all bits cleared and the mantissa's bits are not we have an underflow
-                                    underflow_o = ((~|result.exponent) & (|result.mantissa)) & (divisor_out.exponent[7] & (~dividend_out.exponent[7]));              
-                                    invalid_op_o = 1'b0;
-                                  end
-          endcase
-        end
+          if (invalid_op)
+            begin 
+              to_round_unit_o = CANO_NAN;
+            end
+          else if (is_infty_B | dividend_zero | underflow) //If (X / INF) or (0 / X)
+            begin 
+              // +-Zero
+              to_round_unit_o = {result_sign, 31'b0};
+            end
+          else if (is_infty_A & | (zero_divide & !invalid_op) | overflow) //If (INF / X) or (X / 0) or result overflowed
+            begin 
+              // +-Infinity
+              to_round_unit_o = {result_sign, 31'h7F800000};
+            end
+          else
+            begin 
+              to_round_unit_o = result;
+            end
+        end : OUTPUT_LOGIC
+  
+  assign overflow_o = overflow;
+  assign underflow_o = underflow;
 
 endmodule
