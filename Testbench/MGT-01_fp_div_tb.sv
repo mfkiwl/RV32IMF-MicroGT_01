@@ -18,21 +18,22 @@ module MGT_01_fp_div_unit_tb ();
   logic      underflow_o; 
   logic      invalid_op_o;
   logic      zero_divide_o;
- 
-  fsm_state_e fsm;
-  logic [24:0] mantissa, remainder;
+
 
   MGT_01_fp_div_unit uut (.*);
 
-  always 
-    begin 
-      clk_i = 0; #5;
-      clk_i = 1; #5;
-    end
+  initial
+      begin 
+        clk_i = 1;
+        rst_n_i = 0;
+        clk_en_i = 0;
+      end
+      
+    //Clock 
+    always #(T / 2) clk_i = !clk_i;
 
   initial
     begin 
-      #(2 * T);
       
       clk_en_i = 0;
       rst_n_i = 0;
@@ -47,7 +48,9 @@ module MGT_01_fp_div_unit_tb ();
       #(32 * T);
 
       assert (to_round_unit_o == 32'h3F9B8B57) //1.215189873
-        else $error("Assertion failed!");
+        $display("TEST 1: PASSED"); 
+      else
+        $display("TEST 1: FAILED");
 
       dividend_i = 32'h4119999A;  //9.6
       divisor_i = 32'h40FCCCCD;   //7.9
@@ -63,7 +66,9 @@ module MGT_01_fp_div_unit_tb ();
       #(24 * T);
 
       assert (to_round_unit_o == 32'h3F9B8B57) //1.215189873
-        else $error("Assertion failed!");
+        $display("TEST 2: PASSED"); 
+      else
+        $display("TEST 2: FAILED");
 
       dividend_i = 32'h4119999A;  //9.6
       divisor_i = 32'h0;
@@ -71,7 +76,9 @@ module MGT_01_fp_div_unit_tb ();
       #(32 * T);
 
       assert (to_round_unit_o == P_INFTY) 
-        else $error("Assertion failed!");
+        $display("TEST 3: PASSED"); 
+      else
+        $display("TEST 3: FAILED");
 
       dividend_i = 32'h4119999A;  //9.6
       divisor_i = S_NAN;
@@ -79,7 +86,9 @@ module MGT_01_fp_div_unit_tb ();
       #(32 * T);
 
       assert (to_round_unit_o == Q_NAN) 
-        else $error("Assertion failed!");
+        $display("TEST 4: PASSED"); 
+      else
+        $display("TEST 4: FAILED");
 
       dividend_i = 32'h3A6BEDFA;  //0.0009
       divisor_i = 32'h3C75C28F;   //0.015
@@ -87,7 +96,9 @@ module MGT_01_fp_div_unit_tb ();
       #(32 * T);
 
       assert (to_round_unit_o == 32'h3D75C28F) //0.06
-        else $error("Assertion failed!");
+        $display("TEST 5: PASSED"); 
+      else
+        $display("TEST 5: FAILED");
 
       dividend_i = 32'h3DCCCCCD;  //0.1
       divisor_i = 32'h2B8CBCCC;   //10^-12
@@ -95,63 +106,99 @@ module MGT_01_fp_div_unit_tb ();
       #(32 * T);
 
       assert (to_round_unit_o == 32'h51BA43B7) //10^11
-        else $error("Assertion failed!");
+        $display("TEST 6: PASSED"); 
+      else
+        $display("TEST 6: FAILED AT TIME %t", $time);
 
       dividend_i = 32'h3DCCCCCD;  //0.1
       divisor_i = 32'h7E967699;   //10^38
 
       #(32 * T);
 
-      assert (to_round_unit_o == 32'h000AE398) //10^-39 (denorm)
-        else $error("Assertion failed!");
+      assert (underflow_o) //10^-39 (denorm)
+        $display("TEST 7: PASSED"); 
+      else
+        $display("TEST 7: FAILED AT TIME %t", $time);
 
       dividend_i = 32'h42C80000;  //100
-      divisor_i = 32'h03AA2425;   //10^-37
+      divisor_i = 32'h03AA2425;   //10^-36
 
       #(32 * T);
 
-      assert (to_round_unit_o == P_INFTY) //10^39 (denorm)
-        else $error("Assertion failed!");
+      assert (to_round_unit_o[31:4] == 32'h7E96769) //10^38 
+        $display("TEST 8: PASSED"); 
+      else
+        $display("TEST 8: FAILED AT TIME %t", $time);
 
       dividend_i = 32'h42C80000;  //100
       divisor_i = N_INFTY;   
 
       #(32 * T);
 
-      assert (to_round_unit_o == N_ZERO) //10^39 (denorm)
-        else $error("Assertion failed!");
+      assert (to_round_unit_o == N_ZERO) 
+        $display("TEST 9: PASSED"); 
+      else
+        $display("TEST 9: FAILED AT TIME %t", $time);
 
       dividend_i = 32'h42C80000;  //100
       divisor_i = P_INFTY;   
 
       #(32 * T);
 
-      assert (to_round_unit_o == P_ZERO) //10^39 (denorm)
-        else $error("Assertion failed!");
+      assert (to_round_unit_o == P_ZERO) 
+        $display("TEST 10: PASSED"); 
+      else
+        $display("TEST 10: FAILED AT TIME %t", $time);
 
       dividend_i = P_ZERO;  //100
       divisor_i = P_ZERO;   
 
       #(32 * T);
 
-      assert (to_round_unit_o == Q_NAN) //10^39 (denorm)
-        else $error("Assertion failed!");
+      assert (to_round_unit_o == CANO_NAN) 
+        $display("TEST 11: PASSED"); 
+      else
+        $display("TEST 11: FAILED AT TIME %t", $time);
 
       dividend_i = 32'h42C80000;  //100
       divisor_i = 32'h02081CEA;   //10^-37
 
       #(32 * T);
 
-      assert (to_round_unit_o == P_INFTY) //10^39 (denorm)
-        else $error("Assertion failed!");
+      assert (to_round_unit_o == P_INFTY && overflow_o == 1) //10^39 
+        $display("TEST 12: PASSED"); 
+      else
+        $display("TEST 12: FAILED AT TIME %t", $time);
 
       dividend_i = 32'h48220399;  //165902.3864
       divisor_i = 32'h40B5EAB3;   //5.6849
 
       #(32 * T);
 
-      assert (to_round_unit_o == 32'h46E3FDFB) //29182.99115
-        else $error("Assertion failed!");
+      assert (to_round_unit_o[31:4] == 32'h46E3FDF) //29182.99115
+        $display("TEST 13: PASSED"); 
+      else
+        $display("TEST 13: FAILED AT TIME %t", $time);
+
+      dividend_i = 32'h1e3ce508; // 10^-20 
+      divisor_i = 32'h4e6e6b28;  // 10^9
+
+      #(32 * T);
+
+      assert (to_round_unit_o[31:4] == 32'h0f4ad2f) 
+        $display("TEST 14: PASSED"); 
+      else
+        $display("TEST 14: FAILED AT TIME %t", $time);
+
+      dividend_i = 32'h0da24260; // 10^-30 
+      divisor_i = 32'h4e6e6b28;  // 10^9
+
+      #(32 * T);
+
+      assert (underflow_o) 
+        $display("TEST 14: PASSED"); 
+      else
+        $display("TEST 14: FAILED AT TIME %t", $time);
         
       $stop;
     end
