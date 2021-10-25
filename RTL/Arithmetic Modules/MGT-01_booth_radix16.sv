@@ -48,7 +48,7 @@ module MGT_01_booth_radix16
 
       always_comb 
         begin
-          unique case (crt_state)
+          case (crt_state)
 
             IDLE:     nxt_state = (~rst_n_dly) ? IDLE : MULTIPLY;
 
@@ -99,7 +99,7 @@ module MGT_01_booth_radix16
         begin : BOOTH_RULES
           if (crt_state == MULTIPLY)
             begin
-              unique case ({reg_pair_out._A[3:0], reg_pair_out._L})    //Booth radix-16 rules
+              case ({reg_pair_out._A[3:0], reg_pair_out._L})    //Booth radix-16 rules
 
                 5'b00000,
                 5'b11111:    partial_product = reg_pair_out._P;   //P + 0
