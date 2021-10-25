@@ -25,7 +25,7 @@ module MGT_01_fp_mul_unit
   input  logic      rst_n_i,                       //Reset active low
 
   //Outputs
-  output float_t    to_round_unit_o,               //Result 
+  output float_t    to_round_unit_o,   //Result 
   output logic      valid_o,
   output fu_state_e fu_state_o,
   output logic      overflow_o, 
@@ -71,7 +71,7 @@ module MGT_01_fp_mul_unit
       //Next state logic
       always_comb 
         begin
-          unique case (crt_state)
+          case (crt_state)
 
             IDLE:       nxt_state = (~rst_n_dly) ? IDLE : PREPARE;
 
@@ -240,26 +240,25 @@ module MGT_01_fp_mul_unit
   assign is_sign_A = op_A_out.sign & is_nan_A;
   assign is_sign_B = op_B_out.sign & is_nan_B;
 
+  //Exponent overflow range
+  logic exp_ov_rng;
 
-  logic comparison;
-
+  assign exp_ov_rng = (op_A_out.exponent[7] & op_B_out.exponent[7]) & !result.exponent[7];
 
       always_comb
         begin : OUTPUT_LOGIC   
           //Exceed max floating point range (overflow on exponent) or one of the input is an infinity. Sign must be positive
-          overflow = !zero_detect & !result.sign & ((is_infty_A | is_infty_B) | ((op_A_out.exponent[7] & op_B_out.exponent[7]) & (!result.exponent[7])));
+          overflow = !zero_detect & !result.sign & ((is_infty_A | is_infty_B) | exp_ov_rng);
 
           //If both the operands have negative exponent and the result's exponent is zero but the mantissa is not zero
-          //Or if result is negative infinity or if Exceed max floating point range (overflow on exponent) or one of the input is an infinity.
-          //Sign must be negative 
           underflow = ((!op_A_out.exponent[7] & !op_B_out.exponent[7]) & (result_exponent[8] & !res_mantissa_zero)) |
-                      (result.sign & ((is_infty_A | is_infty_B) | ((op_A_out.exponent[7] & op_B_out.exponent[7]) & !result.exponent[7])));
+                      !zero_detect & result.sign & ((is_infty_A | is_infty_B) | exp_ov_rng);
 
           //If is 0 x Infinity or one of the two inputs (or both) is a signaling NaN 
           invalid_op_o = (zero_detect & (is_infty_A | is_infty_B)) | (is_sign_A | is_sign_B);
 
           if (!zero_detect & (is_infty_A | is_infty_B))
-            begin 
+            begin            // +Infinity or -Infinity
               to_round_unit_o = {result.sign, {8{1'b1}}, 23'b0};
             end
           else if (zero_detect & (is_infty_A | is_infty_B))
@@ -274,7 +273,7 @@ module MGT_01_fp_mul_unit
             begin 
               to_round_unit_o = P_INFTY;
             end
-          else if (underflow)
+          else if (result.sign & ((is_infty_A | is_infty_B) | exp_ov_rng) | underflow)
             begin 
               to_round_unit_o = N_INFTY;
             end
