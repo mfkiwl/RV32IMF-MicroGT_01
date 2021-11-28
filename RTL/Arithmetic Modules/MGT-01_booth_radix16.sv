@@ -25,7 +25,12 @@ module MGT_01_booth_radix16
   output logic signed [(2 * XLEN) - 1:0] result_o,
   output logic                           valid_o                             
 ); 
-
+  
+  // Since the B operand is shifted at maximum of SHIFT_AMOUNT - 1 
+  // the registers P and B should be that amount of bits wider to 
+  // accomodate the shifted bits.
+  localparam TOTAL_BITS = XLEN + 3;
+  
   typedef enum logic [1:0] {IDLE, MULTIPLY, VALID} fsm_state_e;
 
   fsm_state_e crt_state, nxt_state;
@@ -61,16 +66,16 @@ module MGT_01_booth_radix16
         end
 
   typedef struct packed {
-      logic signed [XLEN:0]      _P;      //Partial product
-      logic signed [XLEN - 1:0]  _A;      //Multiplier
-      logic                      _L;      //Last bit shifted
+    logic signed [TOTAL_BITS - 1:0] _P;      //Partial product
+    logic signed [XLEN - 1:0]       _A;      //Multiplier
+      logic                         _L;      //Last bit shifted
   } reg_pair_s;
 
   reg_pair_s reg_pair_in, reg_pair_out;
 
-  logic signed [XLEN:0] partial_product;
+  logic signed [TOTAL_BITS - 1:0] partial_product;
 
-  logic signed [XLEN:0] reg_b_in, reg_b_out;   //Multiplicand register nets
+  logic signed [TOTAL_BITS - 1:0] reg_b_in, reg_b_out;   //Multiplicand register nets
   
       always_ff @(posedge clk_i)
         begin 
@@ -79,13 +84,14 @@ module MGT_01_booth_radix16
           else if (clk_en_i)  //If the operation has completed accept new values else keep using the old ones
             begin
               if (crt_state == IDLE)
-                reg_pair_out <= '{33'b0, multiplier_i, 1'b0};
+                reg_pair_out <= '{35'b0, multiplier_i, 1'b0};
               else if (crt_state == MULTIPLY)
                 reg_pair_out <= reg_pair_in;
             end
         end
-
-  assign reg_b_in = {multiplicand_i[XLEN - 1], multiplicand_i};
+  
+  //Sign extend
+  assign reg_b_in = $signed(multiplicand_i);
 
       always_ff @(posedge clk_i)
         begin
