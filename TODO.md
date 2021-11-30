@@ -27,10 +27,6 @@ Since this project is in constant evolution at this stage, things already comple
 ## 🟠 IN PROGRESS:
 
   * Review the microarchitecture 
-  * FPU 
-    * Floating point comparison unit
-    * Floating point sign injection
-
   * Review MUL / DIV unit valid output
   
 <br />
@@ -46,8 +42,4 @@ Since this project is in constant evolution at this stage, things already comple
   * Write ALU documentation
   * Write multiplication unit documentation
   * Divider unit
-  * Floating point adder
   * Replace all the IP modules
-  * Floating point multiplier
-  * Floating point divider
-  * Floating point square root
